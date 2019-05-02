@@ -87,4 +87,6 @@ def subtract_spont(spont,resp):
     resp = resp - (resp @ u) @ u.T
     return resp
 
+
+
    
