@@ -21,6 +21,7 @@ class EnsemblePursuitPyTorch():
         '''
         with torch.cuda.device(0) as device:
             self.C=torch.matmul(self.X.t(),self.X)
+            self.vals,self.ix=self.C.sort(dim=1)
             self.n=1       
             min_assembly_size=self.neuron_init_dict['parameters']['min_assembly_size']
             max_delta_cost=1000
@@ -59,6 +60,8 @@ class EnsemblePursuitPyTorch():
                 #Increase number of neurons to sample from if while loop hasn't been finding any assemblies.     
                 if safety_it>1:
                     self.n_neurons=10
+                if safety_it>50:
+                    self.n_neurons=100
                 if safety_it>100:
                     self.n_neurons=500
                 if safety_it>600:
@@ -78,11 +81,9 @@ class EnsemblePursuitPyTorch():
         n_av_neurons closest neighbors.
         '''
         n_av_neurons=self.neuron_init_dict['parameters']['n_av_neurons']
-        #Sorts each row of correlation matrix
-        vals,ix=self.C.sort(dim=1)
         #Discards the last entry corresponding to the diagonal 1 and then
         #selects n_av_neurons of the largest entries from sorted array.
-        top_vals=vals[:,:-1][:,self.sz[1]-n_av_neurons:]
+        top_vals=self.vals[:,:-1][:,self.sz[1]-n_av_neurons:]
         #Averages the 5 top correlations.
         av=torch.mean(top_vals,dim=1)
         #Sorts the averages
