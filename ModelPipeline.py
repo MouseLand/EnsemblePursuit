@@ -18,6 +18,7 @@ import pandas as pd
 from scipy import stats
 import matplotlib.gridspec as gridspec
 from sklearn.decomposition import NMF
+import time
 
 class ModelPipeline():
     def __init__(self,data_path, save_path, model,nr_of_components,lambdas=None, alphas=None):
@@ -29,7 +30,8 @@ class ModelPipeline():
         self.nr_of_components=nr_of_components
         
     def fit_model(self):
-        for filename in glob.glob(os.path.join(self.data_path, '*MP034_2017-09-11.mat')):
+        #for filename in glob.glob(os.path.join(self.data_path, '*MP034_2017-09-11.mat')):
+        for filename in glob.glob(os.path.join(self.data_path, '*.mat')):
             print(filename[45:85])
             data = io.loadmat(filename)
             resp = data['stim'][0]['resp'][0]
@@ -40,12 +42,16 @@ class ModelPipeline():
                     neuron_init_dict={'method':'top_k_corr','parameters':{'n_av_neurons':100,'n_of_neurons':1,'min_assembly_size':8}}
                     print(str(neuron_init_dict['parameters']['n_av_neurons']))
                     ep=EnsemblePursuitPyTorch()
+                    start=time.time()
                     U_V,nr_of_neurons,U,V, cost_lst,seed_neurons,ensemble_neuron_lst=ep.fit_transform(X,lambd_,self.nr_of_components,neuron_init_dict)
+                    end=time.time()
+                    tm=end-start
                     np.save(self.save_path+filename[45:85]+'_n_av_n_'+str(neuron_init_dict['parameters']['n_av_neurons'])+'_'+str(lambd_)+'_'+str(self.nr_of_components)+'_V_ep.npy',V)
                     np.save(self.save_path+filename[45:85]+'_n_av_n_'+str(neuron_init_dict['parameters']['n_av_neurons'])+'_'+str(lambd_)+'_'+str(self.nr_of_components)+'_U_ep.npy',U)
                     np.save(self.save_path+filename[45:85]+'_n_av_n_'+str(neuron_init_dict['parameters']['n_av_neurons'])+'_'+str(lambd_)+'_'+str(self.nr_of_components)+'_cost_ep.npy',cost_lst)
                     np.save(self.save_path+filename[45:85]+'_n_av_n_'+str(neuron_init_dict['parameters']['n_av_neurons'])+'_'+str(lambd_)+'_'+str(self.nr_of_components)+'_n_neurons_ep.npy',nr_of_neurons)
                     np.save(self.save_path+filename[45:85]+'_n_av_n_'+str(neuron_init_dict['parameters']['n_av_neurons'])+'_'+str(lambd_)+'_'+str(self.nr_of_components)+'_ensemble_neuron_lst.npy',ensemble_neuron_lst)
+                    np.save(self.save_path+filename[45:85]+'_n_av_n_'+str(neuron_init_dict['parameters']['n_av_neurons'])+'_'+str(lambd_)+'_'+str(self.nr_of_components)+'_time_ep.npy',tm)
                     np.save(self.save_path+filename[45:85]+'_n_av_n_'+str(neuron_init_dict['parameters']['n_av_neurons'])+'_'+str(lambd_)+'_'+str(self.nr_of_components)+'_seed_neurons.npy',seed_neurons)
             if self.model=='SparsePCA':
                 X=subtract_spont(spont,resp)
@@ -54,7 +60,10 @@ class ModelPipeline():
                 for alpha in self.alphas:
                     sPCA=SparsePCA(n_components=self.nr_of_components,alpha=alpha,random_state=7, max_iter=100, n_jobs=-1,verbose=1)
                     #X=X.T
+                    start=time.time()
                     model=sPCA.fit(X)
+                    end=time.time()
+                    elapsed_time=end-start
                     U=model.components_
                     print('U',U.shape)
                     #errors=model.error_
@@ -62,6 +71,7 @@ class ModelPipeline():
                     print('V',V.shape)
                     np.save(self.save_path+filename[45:85]+'_'+str(alpha)+'_'+str(self.nr_of_components)+'_U_sPCA.npy',U)
                     np.save(self.save_path+filename[45:85]+'_'+str(alpha)+'_'+str(self.nr_of_components)+'_V_sPCA.npy',V)
+                    np.save(self.save_path+filename[45:85]+'_'+str(alpha)+'_'+str(self.nr_of_components)+'_time_sPCA.npy',elapsed_time)
                     #np.save(self.save_path+filename[45:85]+'_'+str(alpha)+'_'+str(self.nr_of_components)+'_errors_sPCA.npy',errors)
             if self.model=='NMF':
                  X=subtract_spont(spont,resp)
@@ -97,6 +107,7 @@ class ModelPipeline():
              acc_df=acc_df.append({'Experiment':filename[43:],'accuracy':acc},ignore_index=True)
        pd.options.display.max_colwidth = 300
        print(acc_df)
+       print(acc_df.describe())
        return acc_df
 
     def check_sparsity(self):
@@ -153,7 +164,7 @@ class ModelPipeline():
                     print('corrcoef',np.corrcoef(X[:,0],U_V[:,0]))
     
     def fit_ridge(self):
-        images=sio.loadmat(self.data_path+'/images_natimg2800_all.mat')['imgs']
+        images=sio.loadmat(self.data_path+'/images/images_natimg2800_all.mat')['imgs']
         images=images.transpose((2,0,1))
         images=images.reshape((2800,68*270))
         reduced_images=PCA(images)
@@ -169,7 +180,7 @@ class ModelPipeline():
             x_train,x_test,y_train,y_test=test_train_split(components,stim)
             y_train=y_train-1
             reduced_images_=reduced_images[y_train]
-            for alpha in [5000,10000,15000, 20000, 30000]:
+            for alpha in [5000]:
                 assembly_array=[] 
                 for assembly in range(0,self.nr_of_components):
                     av_resp=(x_train[:,assembly].T+x_test[:,assembly].T)/2
@@ -210,15 +221,29 @@ class ModelPipeline():
             print(filename)
             assembly_array=np.load(filename)
             assembly_array=assembly_array.reshape(10,15,18360)
-            #print(assembly_array.shape)
             fig=plt.figure(figsize=(10,15))
             ax=[]
             for ind1 in range(0,10):
                 for ind2 in range(0,15):
                     ax=fig.add_axes([ind1/10,ind2/15,1./10,1./15])
-                    ax.imshow(assembly_array[ind1,ind2].reshape(68,270),cmap=plt.get_cmap('bwr'))
+                    ax.imshow(assembly_array[ind1,ind2,:].reshape(68,270),cmap=plt.get_cmap('bwr'))
                     ax.set_xticks([])
                     ax.set_yticks([])
             plt.show()
-             
+    
+    def compute_average_time(self):
+        if self.model=='SparsePCA':
+            model_string='*_time_sPCA.npy'
+        time_lst=[]
+        for filename in glob.glob(os.path.join(self.save_path, model_string)):
+            time=np.load(filename)
+            print(time)
+            time_lst.append(time)
+        print('Mean time',np.mean(time_lst))
+
+    def plot_receptive_fields3(self):
+        if self.model=='SparsePCA':
+            model_string='/home/maria/Documents/EnsemblePursuit/NIPS/natimg2800_M170717_MP034_2017-09-11.mat_0.9_150_5000_sPCA_reg.npy'
+        assembly_array=np.load(model_string)
+
         
