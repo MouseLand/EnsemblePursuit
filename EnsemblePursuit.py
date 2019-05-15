@@ -34,7 +34,8 @@ class EnsemblePursuitPyTorch():
             if self.neuron_init_dict['method']=='top_k_corr':
                 self.for_sampling,self.vals=self.corr_top_k(n_neurons=n_of_neurons)
             #Reject assemblies with less than 8 neurons
-            while self.i<min_assembly_size:
+            max_delta_cost=1000
+            while max_delta_cost>0:
                 self.ep_lst=[]
                 if self.first_assembly==True:
                     top_neurons=self.select_top_neurons()
@@ -54,7 +55,7 @@ class EnsemblePursuitPyTorch():
                 max_delta_cost=1000
                 #reset i
                 self.i=1
-                self.neuron_lst=[]
+                self.neuron_lst=[top_neurons[0]]
                 while max_delta_cost>0:
                     cost_delta=self.calculate_cost_delta()
                     #invert the 0's and 1's in the array which stores which neurons have already 
@@ -72,9 +73,10 @@ class EnsemblePursuitPyTorch():
                         self.current_v= self.X[:, (self.selected_neurons == 1)].mean(dim=1)
                         self.neuron_lst.append(max_delta_neuron.item())
                         #print('sel neurons', self.X[:, (self.selected_neurons == 1)].size())
-                    self.i+=1
+                        self.i+=1
                 safety_it+=1
                 #Increase number of neurons to sample from if while loop hasn't been finding any assemblies.
+                '''
                 if safety_it>100:
                     self.neuron_init_dict['parameters']['n_of_neurons']=500
                     if self.neuron_init_dict['method']=='top_k_corr':
@@ -85,6 +87,7 @@ class EnsemblePursuitPyTorch():
                         self.for_sampling,self.vals=self.corr_top_k(n_neurons=1000)
                 if safety_it>1600:
                     raise ValueError('Assembly capacity too big, can\'t fit model')
+                '''
             #Once one assembly has been found, set the variable to false
             self.first_assembly=False
             #Add final seed neuron to seed_neurons.        
@@ -96,7 +99,7 @@ class EnsemblePursuitPyTorch():
             ind[self.neuron_lst]=1
             #X_for_U=self.X[:,ind]
             #u_mul=torch.clamp(torch.matmul(self.current_v,X_for_U),min=0,max=None)/torch.matmul(self.current_v,self.current_v)
-            self.current_u=torch.clamp((1./self.i)*torch.sum(self.c[:,ind],dim=1),min=0,max=None)/torch.matmul(self.current_v,self.current_v)
+            self.current_u=torch.clamp((1./self.i)*torch.sum(self.c[:,(self.selected_neurons==1)],dim=1),min=0,max=None)/torch.matmul(self.current_v,self.current_v)
             #self.current_u[ind]=u_mul
             print(self.current_u)
             self.ensemble_neuron_lst.append(self.neuron_lst)
