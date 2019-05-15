@@ -23,13 +23,11 @@ class EnsemblePursuitPyTorch():
         '''
         with torch.cuda.device(0) as device:
             C=torch.matmul(X.t(),X)
-            print(torch.cuda.memory_allocated(device=0))
+            #print(torch.cuda.memory_allocated(device=0))
             n_av_neurons=self.neuron_init_dict['parameters']['n_av_neurons']
-            try:
-                argsort_neurons=C.argsort(dim=1)[:,:-1][:,self.sz[1]-n_av_neurons-1:]
-            except:
-                argsort_neurons=C.cpu().argsort(dim=1)[:,:-1][:,self.sz[1]-n_av_neurons-1:].cuda()
-            print(argsort_neurons.size())
+            argsort_neurons=C.argsort(dim=1)[:,:-1][:,self.sz[1]-n_av_neurons-1:]
+            #argsort_neurons=C.cpu().argsort(dim=1)[:,:-1][:,self.sz[1]-n_av_neurons-1:].cuda()
+            #print(argsort_neurons.size())
             print(torch.cuda.memory_allocated(device=0))
             self.n=1       
             min_assembly_size=self.neuron_init_dict['parameters']['min_assembly_size']
@@ -80,6 +78,8 @@ class EnsemblePursuitPyTorch():
             self.seed_neurons=self.seed_neurons+[seed]
             current_u=torch.clamp(C_summed,min=0,max=None)/torch.matmul(current_v,current_v)
             self.ensemble_neuron_lst.append(self.neuron_lst)
+            self.current_u=current_u.cpu()
+            self.current_v=current_v.cpu()
             self.U=torch.cat((self.U,self.current_u.view(X.size(1),1)),1)
             self.V=torch.cat((self.V,self.current_v.view(1,X.size(0))),0)
 
@@ -92,7 +92,7 @@ class EnsemblePursuitPyTorch():
         n_av_neurons=self.neuron_init_dict['parameters']['n_av_neurons']
         #Discards the last entry corresponding to the diagonal 1 and then
         #selects n_av_neurons of the largest entries from sorted array.
-        print(torch.cuda.memory_allocated(device=0))
+        #print(torch.cuda.memory_allocated(device=0))
         #argsort_neurons_cropped=argsort_neurons[:,:-1][:,self.sz[1]-n_av_neurons:]
         top_vals=torch.gather(C, 1, argsort_neurons)
         #Averages the 5 top correlations.
@@ -122,7 +122,7 @@ class EnsemblePursuitPyTorch():
             #print('sz',self.sz)
             #Initializes U and V with zeros, later these will be discarded.
             self.U=torch.zeros((X.size(1),1))
-            self.V=torch.zeros([1,X.size(0)])
+            self.V=torch.zeros((1,X.size(0)))
             #List for storing the number of neurons in each fit assembly.
             self.nr_of_neurons=[]
             #List for storing the seed neurons for each assembly.
@@ -137,6 +137,7 @@ class EnsemblePursuitPyTorch():
                 self.nr_of_neurons.append(self.n)
                 U_V=torch.mm(self.current_u.view(self.sz[1],1),self.current_v.view(1,self.sz[0]))
                 X=(X.cpu()-U_V.t())
+                X=X.cuda()
                 print('ensemble nr', iteration)
                 #print('u',self.current_u)
                 #print('v',self.current_v)
