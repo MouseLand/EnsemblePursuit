@@ -14,6 +14,7 @@ class EnsemblePursuitPyTorch():
 
     def calculate_cost_delta(self,C_summed,current_v):
         cost_delta=torch.clamp(C_summed,min=0,max=None)**2/(self.sz[0]*torch.matmul(current_v,current_v))-self.lambd
+        #print(cost_delta)
         return cost_delta
     
     def fit_one_assembly(self,X):
@@ -22,13 +23,13 @@ class EnsemblePursuitPyTorch():
         self.current_v).
         '''
         with torch.cuda.device(0) as device:
-            C=torch.matmul(X.t(),X)
+            C=X.t()@X
             #print(torch.cuda.memory_allocated(device=0))
             n_av_neurons=self.neuron_init_dict['parameters']['n_av_neurons']
             argsort_neurons=C.argsort(dim=1)[:,:-1][:,self.sz[1]-n_av_neurons-1:]
             #argsort_neurons=C.cpu().argsort(dim=1)[:,:-1][:,self.sz[1]-n_av_neurons-1:].cuda()
             #print(argsort_neurons.size())
-            print(torch.cuda.memory_allocated(device=0))
+            #print(torch.cuda.memory_allocated(device=0))
             self.n=1       
             min_assembly_size=self.neuron_init_dict['parameters']['min_assembly_size']
             max_delta_cost=1000
@@ -63,6 +64,7 @@ class EnsemblePursuitPyTorch():
                         current_v= X[:, (self.selected_neurons == 1)].mean(dim=1)
                         self.neuron_lst.append(max_delta_neuron.item())
                         self.n+=1
+                    #print(self.n)
                 safety_it+=1
                 #Increase number of neurons to sample from if while loop hasn't been finding any assemblies.     
                 if safety_it>1:
@@ -76,7 +78,8 @@ class EnsemblePursuitPyTorch():
                 if safety_it>1600:
                     raise ValueError('Assembly capacity too big, can\'t fit model')
             self.seed_neurons=self.seed_neurons+[seed]
-            current_u=torch.clamp(C_summed,min=0,max=None)/torch.matmul(current_v,current_v)
+            current_u=torch.zeros((X.size(1),1))
+            current_u[self.selected_neurons,0]=torch.clamp(C_summed[self.selected_neurons].cpu(),min=0,max=None)/(current_v**2).sum()
             self.ensemble_neuron_lst.append(self.neuron_lst)
             self.current_u=current_u.cpu()
             self.current_v=current_v.cpu()
