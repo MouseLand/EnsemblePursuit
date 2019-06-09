@@ -104,7 +104,8 @@ class EnsemblePursuitPyTorch():
         vals,top_neurons=torch.sort(av)
         #Selects top neurons
         #top_neuron=top_neurons[-1]
-        top_neurons=top_neurons[self.sz[1]-(self.n_neurons+1):]
+        top_neurons=top_neurons[self.sz[1]-self.n_neurons:]
+        print('top neurons size',top_neurons.size())
         idx=torch.randint(0,self.n_neurons,size=(1,))
         top_neuron=top_neurons[idx[0]].item()
         return top_neuron
