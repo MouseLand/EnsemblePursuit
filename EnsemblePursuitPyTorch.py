@@ -24,6 +24,22 @@ class EnsemblePursuitPyTorch():
         #we increase the number of neurons to sample from.
         self.n_neurons_for_sampling=1
         top_neurons=self.sorting_for_seed(C)
+        n=1
+        min_assembly_size=self.options_dict['min_assembly_size']
+        max_delta_cost=1000
+        safety_it=0
+        #A while loop for trying sampling other neurons if the found ensemble size is smaller
+        #than threshold.
+        while n<min_assembly_size:
+            seed=self.sample_seed_neuron(top_neurons)
+            print(seed)
+            n=100
+
+    def sample_seed_neuron(self,top_neurons):
+        idx=torch.randint(0,self.n_neurons_for_sampling,size=(1,))
+        top_neurons=top_neurons[self.sz[0]-(self.n_neurons_for_sampling):]
+        seed=top_neurons[idx[0]].item()
+        return seed
 
     def sorting_for_seed(self,C):
         '''
