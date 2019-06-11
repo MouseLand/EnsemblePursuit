@@ -46,6 +46,19 @@ class EnsemblePursuitPyTorch():
             while max_cost_delta>0:
                 C_summed=(1./n)*torch.sum(C[:,(selected_neurons==1)],dim=1)
                 cost_delta=self.calculate_cost_delta(C_summed,current_v)
+                #invert the 0's and 1's in the array which stores which neurons have already 
+                #been selected into the assembly to use it as a mask
+                mask=selected_neurons.clone().type(torch.cuda.FloatTensor)
+                mask[selected_neurons==0]=1
+                mask[selected_neurons!=0]=0
+                masked_cost_delta=mask*cost_delta
+                values,sorted_neurons=masked_cost_delta.sort()
+                max_delta_neuron=sorted_neurons[-1]
+                max_cost_delta=values[-1]
+                if max_delta_cost>0:
+                    selected_neurons[max_delta_neuron.item()]=1
+                    current_v=X[(selected_neurons == 1),:].mean(dim=0)
+                    n+=1
                 max_cost_delta=-1000
             n=1000
 
@@ -75,7 +88,6 @@ class EnsemblePursuitPyTorch():
         '''
         X=torch.cuda.FloatTensor(X)
         X=self.zscore(X)
-        #print(X)
         self.sz=X.size()
         self.fit_one_ensemble(X)
         

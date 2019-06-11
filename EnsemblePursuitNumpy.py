@@ -37,12 +37,28 @@ class EnsemblePursuitNumpy():
             seed=self.sample_seed_neuron(top_neurons)
             n=1
             current_v=X[seed,:]
-            selected_neurons=np.zeros((X.shape[0],1),dtype=bool)
-            selected_neurons[seed,0]=1
+            selected_neurons=np.zeros((X.shape[0]),dtype=bool)
+            #Seed current_v
+            selected_neurons[seed]=1
+            #Fake cost to initiate while loop
             max_cost_delta=1000
             while max_cost_delta>0:
                 C_summed=(1./n)*np.sum(C[:,selected_neurons.flatten()],axis=1)
                 cost_delta=self.calculate_cost_delta(C_summed,current_v)
+                #invert the 0's and 1's in the array which stores which neurons have already 
+                #been selected into the assembly to use it as a mask
+                mask=selected_neurons.copy()
+                mask[selected_neurons==0]=1
+                mask[selected_neurons!=0]=0
+                masked_cost_delta=mask*cost_delta
+                values=np.sort(masked_cost_delta)
+                sorted_neurons=np.argsort(masked_cost_delta)
+                max_delta_neuron=sorted_neurons.flatten()[-1]
+                max_cost_delta=values.flatten()[-1]
+                if max_cost_delta>0:
+                    selected_neurons[max_delta_neuron]=1
+                    current_v= X[selected_neurons,:].mean(axis=0)
+                    n+=1
                 max_cost_delta=-1000
             n=1000
 
@@ -70,5 +86,4 @@ class EnsemblePursuitNumpy():
     def fit_transform(self,X):
         X=self.zscore(X)
         self.sz=X.shape
-        #print(X)
         self.fit_one_ensemble(X)
