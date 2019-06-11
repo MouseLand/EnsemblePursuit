@@ -1,4 +1,5 @@
 import numpy as np
+import time
 
 
 class EnsemblePursuitNumpy():
@@ -18,6 +19,21 @@ class EnsemblePursuitNumpy():
     def calculate_cost_delta(self,C_summed,current_v):
         cost_delta=np.clip(C_summed,a_min=0,a_max=None)**2/(self.sz[1]*(current_v**2).sum())-self.lambd
         return cost_delta
+    
+    def mask_cost_delta(self,selected_neurons,cost_delta):
+        mask=np.zeros((selected_neurons.shape[0]),dtype=bool)
+        mask[selected_neurons==0]=1
+        mask[selected_neurons!=0]=0
+        masked_cost_delta=mask*cost_delta
+        return masked_cost_delta
+
+    def sum_C(self,C_summed,C,max_delta_neuron):
+        C_summed=C_summed+C[:,max_delta_neuron]
+        return C_summed
+
+    def sum_v(self, v, max_delta_neuron, X):
+        current_v=v+X[max_delta_neuron,:]
+        return current_v
 
     def fit_one_ensemble(self,X):
         C=X@X.T
@@ -37,30 +53,32 @@ class EnsemblePursuitNumpy():
             seed=self.sample_seed_neuron(top_neurons)
             n=1
             current_v=X[seed,:]
+            current_v_unnorm=current_v
             selected_neurons=np.zeros((X.shape[0]),dtype=bool)
             #Seed current_v
             selected_neurons[seed]=1
             #Fake cost to initiate while loop
             max_cost_delta=1000
+            C_summed_unnorm=0
+            max_delta_neuron=seed
             while max_cost_delta>0:
-                C_summed=(1./n)*np.sum(C[:,selected_neurons.flatten()],axis=1)
+                C_summed=self.sum_C(C_summed_unnorm,C,max_delta_neuron)
+                C_summed_unnorm=C_summed.copy()
+                C_summed=(1./n)*C_summed
                 cost_delta=self.calculate_cost_delta(C_summed,current_v)
                 #invert the 0's and 1's in the array which stores which neurons have already 
                 #been selected into the assembly to use it as a mask
-                mask=selected_neurons.copy()
-                mask[selected_neurons==0]=1
-                mask[selected_neurons!=0]=0
-                masked_cost_delta=mask*cost_delta
-                values=np.sort(masked_cost_delta)
-                sorted_neurons=np.argsort(masked_cost_delta)
-                max_delta_neuron=sorted_neurons.flatten()[-1]
-                max_cost_delta=values.flatten()[-1]
+                masked_cost_delta=self.mask_cost_delta(selected_neurons,cost_delta)
+                max_cost_delta=np.max(masked_cost_delta)
+                max_delta_neuron=np.argmax(masked_cost_delta)
                 if max_cost_delta>0:
                     selected_neurons[max_delta_neuron]=1
-                    current_v= X[selected_neurons,:].mean(axis=0)
+                    current_v_unnorm= self.sum_v(current_v_unnorm,max_delta_neuron,X)
                     n+=1
-                max_cost_delta=-1000
-            n=1000
+                    current_v=(1./n)*current_v_unnorm
+            print(n)
+            print('numpy current_v',current_v)
+            n=100000000
 
 
 

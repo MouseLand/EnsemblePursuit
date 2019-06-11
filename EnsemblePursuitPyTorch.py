@@ -20,6 +20,17 @@ class EnsemblePursuitPyTorch():
         cost_delta=torch.clamp(C_summed,min=0,max=None)**2/(self.sz[1]*((current_v**2).sum()))-self.lambd
         return cost_delta
 
+    def mask_cost_delta(self,selected_neurons,cost_delta):
+        mask=torch.zeros([selected_neurons.size()[0]]).type(torch.cuda.FloatTensor)
+        mask[selected_neurons==0]=1
+        mask[selected_neurons!=0]=0
+        masked_cost_delta=mask*cost_delta
+        return masked_cost_delta
+
+    def sum_C(self,C,selected_neurons,n):
+        C_summed=(1./n)*torch.sum(C[:,selected_neurons],dim=1)
+        return C_summed
+
     def fit_one_ensemble(self,X):
         C=X@X.t()
         #A parameter to account for how many top neurons we sample from. It starts from 1,
@@ -44,23 +55,19 @@ class EnsemblePursuitPyTorch():
             #Fake cost to initiate while loop
             max_cost_delta=1000
             while max_cost_delta>0:
-                C_summed=(1./n)*torch.sum(C[:,(selected_neurons==1)],dim=1)
+                C_summed=self.sum_C(C,selected_neurons,n)
                 cost_delta=self.calculate_cost_delta(C_summed,current_v)
                 #invert the 0's and 1's in the array which stores which neurons have already 
                 #been selected into the assembly to use it as a mask
-                mask=selected_neurons.clone().type(torch.cuda.FloatTensor)
-                mask[selected_neurons==0]=1
-                mask[selected_neurons!=0]=0
-                masked_cost_delta=mask*cost_delta
-                values,sorted_neurons=masked_cost_delta.sort()
-                max_delta_neuron=sorted_neurons[-1]
-                max_cost_delta=values[-1]
+                masked_cost_delta=self.mask_cost_delta(selected_neurons,cost_delta)
+                max_delta_neuron=masked_cost_delta.argmax()
+                max_cost_delta=masked_cost_delta.max()
                 if max_delta_cost>0:
                     selected_neurons[max_delta_neuron.item()]=1
                     current_v=X[(selected_neurons == 1),:].mean(dim=0)
                     n+=1
-                max_cost_delta=-1000
-            n=1000
+            print('pytorch current v', current_v)
+            n=100000000
 
     def sample_seed_neuron(self,top_neurons):
         idx=torch.randint(0,self.n_neurons_for_sampling,size=(1,))
