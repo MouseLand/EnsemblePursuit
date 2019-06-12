@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 
 class EnsemblePursuitPyTorch():
     def __init__(self, n_ensembles, lambd, options_dict):
@@ -10,8 +11,7 @@ class EnsemblePursuitPyTorch():
         #Have to transpose X to make torch.sub and div work. Transpose back into 
         #original shape when done with calculations. 
         mean_stimuli=X.t().mean(dim=0)
-        std_stimuli=X.t().std(dim=0)+0.0000000001
-        
+        std_stimuli=X.t().std(dim=0)+1e-10
         X=torch.sub(X.t(),mean_stimuli)
         X=X.div(std_stimuli)
         return X.t()
@@ -27,9 +27,13 @@ class EnsemblePursuitPyTorch():
         masked_cost_delta=mask*cost_delta
         return masked_cost_delta
 
-    def sum_C(self,C,selected_neurons,n):
-        C_summed=(1./n)*torch.sum(C[:,selected_neurons],dim=1)
-        return C_summed
+    def sum_C(self,C_summed_unnorm,C,max_delta_neuron):
+        C_summed_unnorm=C_summed_unnorm+C[:,max_delta_neuron]
+        return C_summed_unnorm
+
+    def sum_v(self, v, max_delta_neuron, X):
+        current_v=v+X[max_delta_neuron,:]
+        return current_v
 
     def fit_one_ensemble(self,X):
         C=X@X.t()
@@ -52,10 +56,14 @@ class EnsemblePursuitPyTorch():
             selected_neurons[seed]=1
             #Seed current_v
             current_v=X[seed,:].flatten()
+            current_v_unnorm=current_v.clone()
             #Fake cost to initiate while loop
             max_cost_delta=1000
+            C_summed_unnorm=0
+            max_delta_neuron=seed
             while max_cost_delta>0:
-                C_summed=self.sum_C(C,selected_neurons,n)
+                C_summed_unnorm=self.sum_C(C_summed_unnorm,C,max_delta_neuron)
+                C_summed=(1./n)*C_summed_unnorm
                 cost_delta=self.calculate_cost_delta(C_summed,current_v)
                 #invert the 0's and 1's in the array which stores which neurons have already 
                 #been selected into the assembly to use it as a mask
@@ -63,9 +71,11 @@ class EnsemblePursuitPyTorch():
                 max_delta_neuron=masked_cost_delta.argmax()
                 max_cost_delta=masked_cost_delta.max()
                 if max_delta_cost>0:
-                    selected_neurons[max_delta_neuron.item()]=1
-                    current_v=X[(selected_neurons == 1),:].mean(dim=0)
+                    selected_neurons[max_delta_neuron]=1
+                    current_v_unnorm= self.sum_v(current_v_unnorm,max_delta_neuron,X)
                     n+=1
+                    current_v=(1./n)*current_v_unnorm
+                #max_cost_delta=-1000
             print('pytorch current v', current_v)
             n=100000000
 
@@ -83,10 +93,8 @@ class EnsemblePursuitPyTorch():
         nr_neurons_to_av=self.options_dict['seed_neuron_av_nr']
         sorted_similarities,_=C.sort(dim=1)
         sorted_similarities=sorted_similarities[:,:-1][:,self.sz[0]-nr_neurons_to_av-1:]
-        print(sorted_similarities.size())
         average_similarities=sorted_similarities.mean(dim=1)
         top_neurons=average_similarities.argsort()
-        print('top neurons', top_neurons)
         return top_neurons
 
     def fit_transform(self,X):
@@ -95,6 +103,7 @@ class EnsemblePursuitPyTorch():
         '''
         X=torch.cuda.FloatTensor(X)
         X=self.zscore(X)
+        print(X)
         self.sz=X.size()
         self.fit_one_ensemble(X)
         
