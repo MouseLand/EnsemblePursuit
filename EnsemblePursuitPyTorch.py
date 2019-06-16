@@ -6,7 +6,7 @@ class EnsemblePursuitPyTorch():
         self.n_ensembles=n_ensembles
         self.lambd=lambd
         self.options_dict=options_dict
-    
+
     def zscore(self,X):
         #Have to transpose X to make torch.sub and div work. Transpose back into 
         #original shape when done with calculations. 
@@ -15,6 +15,7 @@ class EnsemblePursuitPyTorch():
         X=torch.sub(X.t(),mean_stimuli)
         X=X.div(std_stimuli)
         return X.t()
+
 
     def calculate_cost_delta(self,C_summed,current_v):
         cost_delta=torch.clamp(C_summed,min=0,max=None)**2/(self.sz[1]*((current_v**2).sum()))-self.lambd
@@ -62,6 +63,8 @@ class EnsemblePursuitPyTorch():
             C_summed_unnorm=0
             max_delta_neuron=seed
             while max_cost_delta>0:
+                #Add the x corresponding to the max delta neuron to C_sum. Saves computational 
+                #time.
                 C_summed_unnorm=self.sum_C(C_summed_unnorm,C,max_delta_neuron)
                 C_summed=(1./n)*C_summed_unnorm
                 cost_delta=self.calculate_cost_delta(C_summed,current_v)
@@ -75,9 +78,14 @@ class EnsemblePursuitPyTorch():
                     current_v_unnorm= self.sum_v(current_v_unnorm,max_delta_neuron,X)
                     n+=1
                     current_v=(1./n)*current_v_unnorm
-                #max_cost_delta=-1000
-            print('pytorch current v', current_v)
-            n=100000000
+            current_u=torch.zeros((X.size(0),1))
+            current_u[selected_neurons,0]=torch.clamp(C_summed[selected_neurons].cpu(),min=0,max=None)/(current_v**2).sum()
+            current_u=current_u.cpu()
+            current_v=current_v.cpu()
+            self.U=torch.cat((self.U,current_u.view(X.size(0),1)),1)
+            self.V=torch.cat((self.V,current_v.view(1,X.size(1))),0)
+        return current_u, current_v
+            
 
     def sample_seed_neuron(self,top_neurons):
         idx=torch.randint(0,self.n_neurons_for_sampling,size=(1,))
@@ -103,9 +111,22 @@ class EnsemblePursuitPyTorch():
         '''
         X=torch.cuda.FloatTensor(X)
         X=self.zscore(X)
-        print(X)
         self.sz=X.size()
-        self.fit_one_ensemble(X)
+        #Initializes U and V with zeros, later these will be discarded.
+        self.U=torch.zeros((X.size(0),1))
+        self.V=torch.zeros((1,X.size(1)))
+        for iteration in range(0,self.n_ensembles):
+            current_u, current_v=self.fit_one_ensemble(X)
+            U_V=current_u.reshape(self.sz[0],1)@current_v.reshape(1,self.sz[1])
+            X=X.cpu()-U_V
+            X=X.cuda()
+            print('ensemble nr', iteration)
+            cost=torch.mean(torch.mul(X,X))
+            print('cost',cost)
+        #After fitting arrays discard the zero initialization rows and columns from U and V.
+        self.U=self.U[:,1:]
+        self.V=self.V[1:,:] 
+        return self.U,self.V
         
 
  

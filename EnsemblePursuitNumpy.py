@@ -7,7 +7,6 @@ class EnsemblePursuitNumpy():
         self.n_ensembles=n_ensembles
         self.lambd=lambd
         self.options_dict=options_dict
-
         
     def zscore(self,X):
         mean_stimuli=np.mean(X.T,axis=0)
@@ -62,6 +61,8 @@ class EnsemblePursuitNumpy():
             C_summed_unnorm=0
             max_delta_neuron=seed
             while max_cost_delta>0:
+                #Add the x corresponding to the max delta neuron to C_sum. Saves computational 
+                #time.
                 C_summed_unnorm=self.sum_C(C_summed_unnorm,C,max_delta_neuron)
                 C_summed=(1./n)*C_summed_unnorm
                 cost_delta=self.calculate_cost_delta(C_summed,current_v)
@@ -75,12 +76,11 @@ class EnsemblePursuitNumpy():
                     current_v_unnorm= self.sum_v(current_v_unnorm,max_delta_neuron,X)
                     n+=1
                     current_v=(1./n)*current_v_unnorm
-                #max_cost_delta=-1000
-            print(n)
-            print('numpy current_v',current_v)
-            n=100000000
-
-
+                    current_u=np.zeros((X.shape[0],1))
+        current_u[selected_neurons,0]=np.clip(C_summed[selected_neurons],a_min=0,a_max=None)/(current_v**2).sum()
+        self.U=np.concatenate((self.U,current_u),axis=1)
+        self.V=np.concatenate((self.V,current_v.reshape(1,self.sz[1])),axis=0)
+        return current_u, current_v
 
     def sample_seed_neuron(self,top_neurons):
         sample_top_neuron=np.random.randint(self.n_neurons_for_sampling,size=1)
@@ -95,13 +95,23 @@ class EnsemblePursuitNumpy():
         '''
         nr_neurons_to_av=self.options_dict['seed_neuron_av_nr']
         sorted_similarities=np.sort(C,axis=1)[:,:-1][:,self.sz[0]-nr_neurons_to_av-1:] 
-        print(sorted_similarities.shape)
         average_similarities=np.mean(sorted_similarities,axis=1)
         top_neurons=np.argsort(average_similarities)
         return top_neurons
    
     def fit_transform(self,X):
         X=self.zscore(X)
-        print(X)
         self.sz=X.shape
-        self.fit_one_ensemble(X)
+        self.U=np.zeros((X.shape[0],1))
+        self.V=np.zeros((1,X.shape[1]))
+        for iteration in range(0,self.n_ensembles):
+            current_u, current_v=self.fit_one_ensemble(X)
+            U_V=current_u.reshape(self.sz[0],1)@current_v.reshape(1,self.sz[1])
+            X=X-U_V
+            print('ensemble nr', iteration)
+            cost=np.mean(X*X)
+            print('cost',cost) 
+        #After fitting arrays discard the zero initialization rows and columns from U and V.
+        self.U=self.U[:,1:]
+        self.V=self.V[1:,:]
+        return self.U, self.V
