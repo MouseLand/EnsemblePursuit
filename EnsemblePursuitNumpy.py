@@ -42,9 +42,8 @@ class EnsemblePursuitNumpy():
         # we increase the number of neurons to sample from.
         self.n_neurons_for_sampling=1
         top_neurons=self.sorting_for_seed(C)
-        n=1
+        n=0
         min_assembly_size=self.options_dict['min_assembly_size']
-        max_delta_cost=1000
         safety_it=0
         #A while loop for trying sampling other neurons if the found ensemble size is smaller
         #than threshold.
@@ -77,13 +76,25 @@ class EnsemblePursuitNumpy():
                     n+=1
                     current_v=(1./n)*current_v_unnorm
                     current_u=np.zeros((X.shape[0],1))
+            safety_it+=1
+            #Increase number of neurons to sample from if while loop hasn't been finding any assemblies.     
+            if safety_it>0:
+                self.n_neurons_for_sampling=50
+            if safety_it>50:
+                self.n_neurons_for_sampling=100
+            if safety_it>100:
+                self.n_neurons_for_sampling=500
+            if safety_it>600:
+                self.n_neurons_for_sampling=1000
+            if safety_it>1600:
+                raise ValueError('Assembly capacity too big, can\'t fit model')
         current_u[selected_neurons,0]=np.clip(C_summed[selected_neurons],a_min=0,a_max=None)/(current_v**2).sum()
         self.U=np.concatenate((self.U,current_u),axis=1)
         self.V=np.concatenate((self.V,current_v.reshape(1,self.sz[1])),axis=0)
         return current_u, current_v
 
     def sample_seed_neuron(self,top_neurons):
-        sample_top_neuron=np.random.randint(self.n_neurons_for_sampling,size=1)
+        sample_top_neuron=np.random.randint(0,self.n_neurons_for_sampling,size=1)
         top_neurons=top_neurons[self.sz[0]-(self.n_neurons_for_sampling):]
         seed=top_neurons[sample_top_neuron][0]
         return seed
@@ -114,4 +125,4 @@ class EnsemblePursuitNumpy():
         #After fitting arrays discard the zero initialization rows and columns from U and V.
         self.U=self.U[:,1:]
         self.V=self.V[1:,:]
-        return self.U, self.V
+        return self.U, self.V.T

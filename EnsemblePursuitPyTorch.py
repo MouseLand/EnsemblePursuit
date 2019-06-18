@@ -44,7 +44,7 @@ class EnsemblePursuitPyTorch():
         #we increase the number of neurons to sample from.
         self.n_neurons_for_sampling=1
         top_neurons=self.sorting_for_seed(C)
-        n=1
+        n=0
         min_assembly_size=self.options_dict['min_assembly_size']
         max_delta_cost=1000
         safety_it=0
@@ -78,12 +78,24 @@ class EnsemblePursuitPyTorch():
                     current_v_unnorm= self.sum_v(current_v_unnorm,max_delta_neuron,X)
                     n+=1
                     current_v=(1./n)*current_v_unnorm
-            current_u=torch.zeros((X.size(0),1))
-            current_u[selected_neurons,0]=torch.clamp(C_summed[selected_neurons].cpu(),min=0,max=None)/(current_v**2).sum()
-            current_u=current_u.cpu()
-            current_v=current_v.cpu()
-            self.U=torch.cat((self.U,current_u.view(X.size(0),1)),1)
-            self.V=torch.cat((self.V,current_v.view(1,X.size(1))),0)
+            safety_it+=1
+            #Increase number of neurons to sample from if while loop hasn't been finding any assemblies.     
+            if safety_it>0:
+                self.n_neurons_for_sampling=50
+            if safety_it>50:
+                self.n_neurons_for_sampling=100
+            if safety_it>100:
+                self.n_neurons_for_sampling=500
+            if safety_it>600:
+                self.n_neurons_for_sampling=1000
+            if safety_it>1600:
+                raise ValueError('Assembly capacity too big, can\'t fit model')
+        current_u=torch.zeros((X.size(0),1))
+        current_u[selected_neurons,0]=torch.clamp(C_summed[selected_neurons].cpu(),min=0,max=None)/(current_v**2).sum()
+        current_u=current_u.cpu()
+        current_v=current_v.cpu()
+        self.U=torch.cat((self.U,current_u.view(X.size(0),1)),1)
+        self.V=torch.cat((self.V,current_v.view(1,X.size(1))),0)
         return current_u, current_v
             
 
@@ -126,7 +138,7 @@ class EnsemblePursuitPyTorch():
         #After fitting arrays discard the zero initialization rows and columns from U and V.
         self.U=self.U[:,1:]
         self.V=self.V[1:,:] 
-        return self.U,self.V
+        return self.U,self.V.t()
         
 
  
