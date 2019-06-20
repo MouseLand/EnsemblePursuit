@@ -35,20 +35,24 @@ class EnsemblePursuitNumpy():
         return current_v
 
     def fit_one_ensemble(self,X):
+        start=time.time()
         C=X@X.T
+        end=time.time()
         #A parameter to account for how many top neurons we sample from. It starts from 1,
         #because we choose the top neuron when possible, e.g. when we can find an ensemble
         # that is larger than min ensemble size. If there is no ensemble with the top neuron
         # we increase the number of neurons to sample from.
         self.n_neurons_for_sampling=1
-        top_neurons=self.sorting_for_seed(C)
         n=0
         min_assembly_size=self.options_dict['min_assembly_size']
         safety_it=0
         #A while loop for trying sampling other neurons if the found ensemble size is smaller
         #than threshold.
         while n<min_assembly_size:
-            seed=self.sample_seed_neuron(top_neurons)
+            if self.n_neurons_for_sampling>1:
+                 seed=self.repeated_seed(C)
+            else:
+                 seed=self.sorting_for_seed(C)
             n=1
             current_v=X[seed,:]
             current_v_unnorm=current_v.copy()
@@ -92,8 +96,12 @@ class EnsemblePursuitNumpy():
         self.U=np.concatenate((self.U,current_u),axis=1)
         self.V=np.concatenate((self.V,current_v.reshape(1,self.sz[1])),axis=0)
         return current_u, current_v
-
-    def sample_seed_neuron(self,top_neurons):
+    
+    def repeated_seed(self,C):
+        nr_neurons_to_av=self.options_dict['seed_neuron_av_nr']
+        sorted_similarities=np.sort(C,axis=1)[:,:-1][:,self.sz[0]-nr_neurons_to_av-1:] 
+        average_similarities=np.mean(sorted_similarities,axis=1)
+        top_neurons=np.argsort(average_similarities)
         sample_top_neuron=np.random.randint(0,self.n_neurons_for_sampling,size=1)
         top_neurons=top_neurons[self.sz[0]-(self.n_neurons_for_sampling):]
         seed=top_neurons[sample_top_neuron][0]
@@ -107,8 +115,8 @@ class EnsemblePursuitNumpy():
         nr_neurons_to_av=self.options_dict['seed_neuron_av_nr']
         sorted_similarities=np.sort(C,axis=1)[:,:-1][:,self.sz[0]-nr_neurons_to_av-1:] 
         average_similarities=np.mean(sorted_similarities,axis=1)
-        top_neurons=np.argsort(average_similarities)
-        return top_neurons
+        seed=np.argmax(average_similarities)
+        return seed
    
     def fit_transform(self,X):
         X=self.zscore(X)
