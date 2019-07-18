@@ -68,7 +68,7 @@ class EnsemblePursuitPyTorch():
                 safety_it+=1
                 #Increase number of neurons to sample from if while loop hasn't been finding any assemblies.     
                 if safety_it>1:
-                    self.n_neurons=10
+                    self.n_neurons=50
                 if safety_it>50:
                     self.n_neurons=100
                 if safety_it>100:

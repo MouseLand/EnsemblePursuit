@@ -81,7 +81,7 @@ class EnsemblePursuitPyTorch():
             safety_it+=1
             #Increase number of neurons to sample from if while loop hasn't been finding any assemblies.     
             if safety_it>0:
-                self.n_neurons_for_sampling=50
+                self.n_neurons_for_sampling=100
             if safety_it>50:
                 self.n_neurons_for_sampling=100
             if safety_it>100:
@@ -121,6 +121,7 @@ class EnsemblePursuitPyTorch():
         '''
         X-- shape (neurons, timepoints)
         '''
+        torch.manual_seed(7)
         X=torch.cuda.FloatTensor(X)
         X=self.zscore(X)
         self.sz=X.size()

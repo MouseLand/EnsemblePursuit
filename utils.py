@@ -2,6 +2,13 @@ import torch
 import numpy as np
 from scipy.sparse.linalg import eigsh
 
+def zscore(X):
+    mean_stimuli=np.mean(X,axis=0)
+    std_stimuli=np.std(X,axis=0,ddof=1)+1e-10
+    X=np.subtract(X,mean_stimuli)
+    X=np.divide(X,std_stimuli)
+    return X
+
 def test_train_split(data,stim):
     unique, counts = np.unique(stim.flatten(), return_counts=True)
     count_dict=dict(zip(unique, counts))

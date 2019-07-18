@@ -1,18 +1,27 @@
 from EnsemblePursuitSimulations import EnsemblePursuitPyTorch
-from scipy.stats import zscore
+#from scipy.stats import zscore
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.decomposition import FastICA
 import seaborn as sns
+from sklearn.decomposition import PCA
 
 class Simulations():
+    def zscore(self,X):
+        X=X.T
+        mean_stimuli=np.mean(X,axis=0)
+        std_stimuli=np.std(X,axis=0,ddof=1)+1e-10
+        X=np.subtract(X,mean_stimuli)
+        X=np.divide(X,std_stimuli)
+        return X.T
+
     def simulate_data(self,nr_components,nr_timepoints,nr_neurons):
         zeros_for_U=np.random.choice([0,1], nr_neurons*nr_components, p=[0.75, 0.25]).reshape((nr_neurons,nr_components))
         U=np.random.normal(loc=2,scale=1,size=(nr_neurons,nr_components))
         U=np.abs(U*zeros_for_U)
         V=np.random.normal(loc=0,scale=1,size=(nr_components,nr_timepoints))
         X=U@V
-        X=zscore(X,axis=1)
+        X=self.zscore(X)
         self.U_orig=U
         self.V_orig=V
         return X
@@ -25,7 +34,6 @@ class Simulations():
             U=U.numpy()
             V=V.numpy().T
         if model_string=='ICA':
-            print('boyaka')
             ica=FastICA(n_components=nr_components,random_state=7)
             V=ica.fit_transform(X).T
             U=ica.mixing_
@@ -77,6 +85,7 @@ class Simulations():
         subplotnr=nr_rows+str(5)+str(corrs.shape[0])
         subplotnr=int(subplotnr)
         fig = plt.figure(1,figsize=(15,8))
+        #fig=plt.figure(1,figsize=(15,1))
         for j in range(1,corrs.shape[0]+1):
             ax=fig.add_subplot(int(nr_rows),5,j)
             most_correlated_v=np.argmax(corrs[j-1,:])
@@ -180,6 +189,18 @@ class Simulations():
         explained_variance=((self.orig.flatten()-(self.U@self.V).flatten())**2).sum()
         normalizer=((self.orig.flatten()-np.mean(self.orig.flatten()))**2).sum()
         return 1-explained_variance/normalizer
+
+    def variance_explained_by_neuron(self):
+        UV=self.U@self.V
+        print(UV.shape)
+        print(self.orig.shape)
+        vars_=[]
+        for neuron in range(0,self.U.shape[0]):
+            expl_var=((self.orig[neuron,:].flatten()-UV[neuron,:].flatten())**2).sum()
+            normalizer=((self.orig[neuron,:].flatten()-np.mean(self.orig[neuron,:].flatten()))**2).sum()
+            vars_.append(1-expl_var/normalizer)
+        total_variance=np.mean(vars_)
+        return total_variance, vars_
         
     
     def run_and_fit(self,model_string,nr_components,nr_timepoints,nr_neurons,lambd=0):
@@ -189,6 +210,10 @@ class Simulations():
             self.U,self.V=self.fit_to_simulation('EnsemblePursuit',nr_components,nr_timepoints,nr_neurons,X,lambd)
         if model_string=='ICA':
            self.U,self.V=self.fit_to_simulation('ICA',nr_components,nr_timepoints,nr_neurons,X.T)
+        if model_string=='PCA':
+           pca=PCA(n_components=nr_components,random_state=7)
+           self.V=pca.fit_transform(X.T).T
+           self.U=pca.components_.T
         print('SHPS', self.U.shape, self.V.shape)
         self.orig=X
         self.approx=self.U@self.V
