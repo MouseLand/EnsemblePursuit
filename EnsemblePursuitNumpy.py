@@ -79,7 +79,7 @@ class EnsemblePursuitNumpy():
                     current_v_unnorm= self.sum_v(current_v_unnorm,max_delta_neuron,X)
                     n+=1
                     current_v=(1./n)*current_v_unnorm
-                    current_u=np.zeros((X.shape[0],1))
+                    
             safety_it+=1
             #Increase number of neurons to sample from if while loop hasn't been finding any assemblies.     
             if safety_it>0:
@@ -92,6 +92,7 @@ class EnsemblePursuitNumpy():
                 self.n_neurons_for_sampling=1000
             if safety_it>1600:
                 raise ValueError('Assembly capacity too big, can\'t fit model')
+        current_u=np.zeros((X.shape[0],1))
         current_u[selected_neurons,0]=np.clip(C_summed[selected_neurons],a_min=0,a_max=None)/(current_v**2).sum()
         self.U=np.concatenate((self.U,current_u),axis=1)
         self.V=np.concatenate((self.V,current_v.reshape(1,self.sz[1])),axis=0)
