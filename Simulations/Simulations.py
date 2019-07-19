@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.decomposition import FastICA
 import seaborn as sns
-from sklearn.decomposition import PCA
+from sklearn.decomposition import PCA, SparsePCA, NMF
 
 class Simulations():
     def zscore(self,X):
@@ -161,10 +161,14 @@ class Simulations():
         ax4.text(0.55,0.8,'Median '+str(np.median(max_corrs_orig))[0:4],transform=ax4.transAxes)
         plt.title('Max corrs V_original')
         ax5=plt.subplot(2,3,5)
+        print(max_corrs_fitted)
+        print(max_corrs_orig_fit)
         ax5.hist(max_corrs_fitted)
         plt.axvline(np.median(max_corrs_fitted),color='r')
         if model_string=='ICA':
             ax5.text(0.55,0.8,'Median '+str(np.median(max_corrs_fitted))[0:3]+'e-15',transform=ax5.transAxes)
+        if model_string=='PCA':
+            ax5.text(0.55,0.8,'Median '+str(np.median(max_corrs_fitted))[0:3]+'e-16',transform=ax5.transAxes)
         else:
             ax5.text(0.55,0.8,'Median '+str(np.median(max_corrs_fitted))[0:4],transform=ax5.transAxes)
         plt.title('Max corrs V_fitted')
@@ -214,6 +218,15 @@ class Simulations():
            pca=PCA(n_components=nr_components,random_state=7)
            self.V=pca.fit_transform(X.T).T
            self.U=pca.components_.T
+        if model_string=='sparsePCA':
+           spca=SparsePCA(n_components=nr_components,random_state=7)
+           self.V=spca.fit_transform(X.T).T
+           self.U=spca.components_.T
+        if model_string=='NMF':
+           X-=X.min(axis=0)
+           nmf=NMF(n_components=nr_components, init='nndsvd', random_state=7)
+           self.V=nmf.fit_transform(X.T).T
+           self.U=nmf.components_.T
         print('SHPS', self.U.shape, self.V.shape)
         self.orig=X
         self.approx=self.U@self.V
