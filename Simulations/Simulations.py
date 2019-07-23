@@ -1,10 +1,11 @@
 from EnsemblePursuitSimulations import EnsemblePursuitPyTorch
+from EnsemblePursuitWithCorrReturn import EnsemblePursuitNumpy
 #from scipy.stats import zscore
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.decomposition import FastICA
 import seaborn as sns
-from sklearn.decomposition import PCA, SparsePCA, NMF
+from sklearn.decomposition import PCA, SparsePCA, NMF, LatentDirichletAllocation
 
 class Simulations():
     def zscore(self,X):
@@ -16,7 +17,7 @@ class Simulations():
         return X.T
 
     def simulate_data(self,nr_components,nr_timepoints,nr_neurons):
-        zeros_for_U=np.random.choice([0,1], nr_neurons*nr_components, p=[0.75, 0.25]).reshape((nr_neurons,nr_components))
+        zeros_for_U=np.random.choice([0,1], nr_neurons*nr_components, p=[1-0.01, 0.01]).reshape((nr_neurons,nr_components))
         U=np.random.normal(loc=2,scale=1,size=(nr_neurons,nr_components))
         U=np.abs(U*zeros_for_U)
         V=np.random.normal(loc=0,scale=1,size=(nr_components,nr_timepoints))
@@ -24,22 +25,30 @@ class Simulations():
         X=self.zscore(X)
         self.U_orig=U
         self.V_orig=V
+        plt.hist(np.sum(zeros_for_U,axis=0))
+        plt.show()
+        #print('Mean',X.shape,np.mean(X,axis=1))
         return X
 
-    def fit_to_simulation(self,model_string,nr_components,nr_timepoints,nr_neurons,X,lambd=0):
-        options_dict={'seed_neuron_av_nr':10,'min_assembly_size':8}
-        if model_string=='EnsemblePursuit':
-            ep_pt=EnsemblePursuitPyTorch(n_ensembles=nr_components,lambd=lambd,options_dict=options_dict)
-            U,V=ep_pt.fit_transform(X)
-            U=U.numpy()
-            V=V.numpy().T
-        if model_string=='ICA':
-            ica=FastICA(n_components=nr_components,random_state=7)
-            V=ica.fit_transform(X).T
-            U=ica.mixing_
-        print(U.shape)
-        print(V.shape)
-        return U,V
+    def simulate_data_w_noise(self,nr_components,nr_timepoints,nr_neurons, noise_ampl_mult):
+        zeros_for_U=np.random.choice([0,1], nr_neurons*nr_components, p=[1-0.01, 0.01]).reshape((nr_neurons,nr_components))
+        U=np.random.normal(loc=2,scale=1,size=(nr_neurons,nr_components))
+        U=np.abs(U*zeros_for_U)
+        V=np.random.normal(loc=1,scale=1,size=(nr_components,nr_timepoints))
+        X=U@V
+        low_rank_std=np.std(X,axis=1)
+        X_noisy=np.zeros((nr_neurons,nr_timepoints))
+        for neuron in range(0,X.shape[0]):
+            noise=np.random.normal(loc=0,scale=noise_ampl_mult*low_rank_std[neuron],size=(1,nr_timepoints))
+            X_noisy[neuron,:]=X[neuron,:]+noise
+        X=self.zscore(X_noisy)
+        self.U_orig=U
+        self.V_orig=V
+        plt.hist(np.sum(zeros_for_U,axis=0))
+        plt.show()
+        #print('Mean',X.shape,np.mean(X,axis=1))
+        return X
+
 
     def find_nearest_U_comp(self,model_string,orig_ind):
         orig=self.U_orig[:,orig_ind]
@@ -84,8 +93,8 @@ class Simulations():
         nr_rows=str(int(np.ceil(corrs.shape[0]/5)))
         subplotnr=nr_rows+str(5)+str(corrs.shape[0])
         subplotnr=int(subplotnr)
-        fig = plt.figure(1,figsize=(15,8))
-        #fig=plt.figure(1,figsize=(15,1))
+        #fig = plt.figure(1,figsize=(15,8))
+        fig=plt.figure(1,figsize=(15,1))
         for j in range(1,corrs.shape[0]+1):
             ax=fig.add_subplot(int(nr_rows),5,j)
             most_correlated_v=np.argmax(corrs[j-1,:])
@@ -205,15 +214,86 @@ class Simulations():
             vars_.append(1-expl_var/normalizer)
         total_variance=np.mean(vars_)
         return total_variance, vars_
-        
+
+    def initial_component(self,nr_components,nr_timepoints,nr_neurons):
+        X=self.simulate_data(nr_components,nr_timepoints,nr_neurons)
+        n_neurons=[]
+        median_corrs=[]
+        rng=np.arange(0.01,0.5, 0.01)
+        list_rng=list(rng)
+        for param in list_rng:
+            options_dict={'seed_neuron_av_nr':10,'min_assembly_size':1}
+            ep_np=EnsemblePursuitNumpy(n_ensembles=nr_components,lambd=param,options_dict=options_dict)
+            U,V=ep_np.fit_transform(X)
+            self.U=U
+            self.V=V.T
+            n_neurons.append(np.count_nonzero(self.U[:,0].flatten()))
+            corrs=self.V_corr_mat('EnsemblePursuitNumpy')
+            max_corrs_orig_fit=np.max(corrs,axis=1)
+            median_corrs.append(np.median(max_corrs_orig_fit))
+        plt.plot(np.arange(0.01,0.5,0.01),n_neurons,label='Number of neurons')
+        plt.legend()
+        plt.show()
+        plt.plot(np.arange(0.01,0.5,0.01),median_corrs,label='Median corr')
+        plt.legend()
+            
+    def plot_corrs_as_neurons_added_(self):
+        '''
+        This function is buggy.
+        '''
+        print(self.neuron_lst)
+        corrs_tot=[]
+        for ensemble in self.neuron_lst:
+            corrs=[]
+            for neuron_ind in range(1,len(ensemble)+1):
+                timeseries=self.orig[ensemble[:neuron_ind],:]
+                av=np.mean(timeseries,axis=0)
+                corrs_sublst=[]
+                #print(self.V_orig.shape)
+                for j in range(self.V_orig.shape[0]):
+                    corr=np.corrcoef(self.V_orig[j,:],av)[0,1]
+                    corrs_sublst.append(corr)
+                corrs.append(max(corrs_sublst))
+            corrs_tot.append(corrs)
+        return corrs_tot
+
+    def plot_corrs_as_neurons_added(self):
+        nr_rows=str(int(np.ceil(len(self.corrs)/5)))
+        subplotnr=nr_rows+str(5)+str(len(self.corrs))
+        subplotnr=int(subplotnr)
+        #fig = plt.figure(1,figsize=(15,8))
+        fig=plt.figure(1,figsize=(10,4),dpi=50)
+        for j in range(1,len(self.corrs)+1):
+            ax=fig.add_subplot(int(nr_rows),5,j)
+            ax.plot(self.corrs[j-1],'o')
+            plt.title('Comp '+str(j))
+        plt.subplots_adjust(wspace=0.6,hspace=0.5)
+        plt.show()
+                 
+                
     
     def run_and_fit(self,model_string,nr_components,nr_timepoints,nr_neurons,lambd=0):
         np.random.seed(7)
-        X=self.simulate_data(nr_components,nr_timepoints,nr_neurons)
+        #X=self.simulate_data(nr_components,nr_timepoints,nr_neurons)
+        X=self.simulate_data_w_noise(nr_components,nr_timepoints,nr_neurons,noise_ampl_mult=1)
         if model_string=='EnsemblePursuit':
-            self.U,self.V=self.fit_to_simulation('EnsemblePursuit',nr_components,nr_timepoints,nr_neurons,X,lambd)
+            options_dict={'seed_neuron_av_nr':10,'min_assembly_size':1}
+
+
+            ep_pt=EnsemblePursuitPyTorch(n_ensembles=nr_components,lambd=lambd,options_dict=options_dict)
+            U,V=ep_pt.fit_transform(X)
+            self.U=U.numpy()
+            self.V=V.numpy().T
+        if model_string=='EnsemblePursuitNumpy':
+            options_dict={'seed_neuron_av_nr':10,'min_assembly_size':1}
+            ep_np=EnsemblePursuitNumpy(n_ensembles=nr_components,lambd=lambd,options_dict=options_dict)
+            U,V,self.corrs=ep_np.fit_transform(X)
+            self.U=U
+            self.V=V.T
         if model_string=='ICA':
-           self.U,self.V=self.fit_to_simulation('ICA',nr_components,nr_timepoints,nr_neurons,X.T)
+           ica=FastICA(n_components=nr_components,random_state=7)
+           self.V=ica.fit_transform(X.T).T
+           self.U=ica.mixing_
         if model_string=='PCA':
            pca=PCA(n_components=nr_components,random_state=7)
            self.V=pca.fit_transform(X.T).T
@@ -225,6 +305,11 @@ class Simulations():
         if model_string=='NMF':
            X-=X.min(axis=0)
            nmf=NMF(n_components=nr_components, init='nndsvd', random_state=7)
+           self.V=nmf.fit_transform(X.T).T
+           self.U=nmf.components_.T
+        if model_string=='LDA':
+           X-=X.min(axis=0)
+           nmf=LatentDirichletAllocation(n_components=nr_components,random_state=7)
            self.V=nmf.fit_transform(X.T).T
            self.U=nmf.components_.T
         print('SHPS', self.U.shape, self.V.shape)
