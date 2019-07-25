@@ -13,6 +13,7 @@ import time
 import glob
 import os
 from scipy import io
+import matplotlib
 
 class ModelPipeline():
     def __init__(self,data_path, save_path, model,nr_of_components,lambd_=None):
@@ -95,8 +96,8 @@ class ModelPipeline():
              model_string='*_V_pca.npy'
        if self.model=='LDA':
              model_string='*_V_lda.npy'
-       if self.model=='NMF_reg_exps':
-            model_string='*_V_NMF_reg_exps.npy'
+       if self.model=='NMF_regularization_experiments':
+            model_string='*_V_NMF_regularization_experiments.npy'
        if self.model=='all':
              #self.save_path=self.data_path
              model_string='*.mat'
@@ -115,9 +116,9 @@ class ModelPipeline():
              istim = istim[istim<nimg]
              x_train,x_test,y_train,y_test=test_train_split(V,istim)
              acc=evaluate_model_torch(x_train,x_test)
-             if self.model!='NMF_reg_exps':
+             if self.model!='NMF_regularization_experiments':
                  acc_df=acc_df.append({'Experiment':filename[len(self.save_path):],'accuracy':acc},ignore_index=True)
-             if self.model=='NMF_reg_exps':
+             if self.model=='NMF_regularization_experiments':
                  acc_df=acc_df.append({'Experiment':filename[len(self.save_path):],'accuracy':acc, 'alpha':filename[:-19][-1:]},ignore_index=True)
        grouped=acc_df.groupby(['alpha']).mean()
        print(grouped)
@@ -205,8 +206,8 @@ class ModelPipeline():
                     i+=1
             plt.show()
 
-    def NMF_reg_exps_fit(self):
-        self.model='NMF_reg_exps'
+    def NMF_regul_exps_fit(self):
+        self.model='NMF_regularization_experiments'
         alphas=[0.01,0.1,1,10,100]
         powers=[-2,-1,0,1,2]
         ind_dict={0.01:0,0.1:1,1:3,10:4,100:5}
