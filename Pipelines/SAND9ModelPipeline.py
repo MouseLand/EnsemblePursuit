@@ -237,7 +237,10 @@ class ModelPipeline():
             for j in range(0,self.nr_of_components):
                 #Set small numbers to zero
                 U[U<0.000001]=0
-                proportion_of_nonzeros=np.sum(U[j,:]!=0)
+                if self.model=='EnsemblePursuit_pytorch' or self.model=='EnsemblePursuit_numpy':
+                    proportion_of_nonzeros=np.sum(U[:,j]!=0)
+                else:
+                    proportion_of_nonzeros=np.sum(U[j,:]!=0)
                 prop_lst.append(proportion_of_nonzeros)
             #matplotlib.rcParams.update({'font.size': 22})
             fig=plt.figure(figsize=(6,6))
