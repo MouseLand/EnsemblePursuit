@@ -227,8 +227,25 @@ class ModelPipeline():
                 U=model.components_
                 np.save(self.save_path+filename+'_'+str(ind_dict[alpha])+'_U_NMF_reg_exps.npy',U)
                 np.save(self.save_path+filename+'_'+str(ind_dict[alpha])+'_V_NMF_reg_exps.npy',V)
-                
 
-
-        
+    def check_sparsity(self):
+        if self.model=='NMF_regularization_experiments':
+            model_string='*U_NMF_reg_exps.npy'
+        for filename in glob.glob(os.path.join(self.save_path, model_string)):
+            U=np.load(filename)
+            prop_lst=[]
+            for j in range(0,self.nr_of_components):
+                #Set small numbers to zero
+                U[U<0.000001]=0
+                proportion_of_nonzeros=np.sum(U[j,:]!=0)
+                prop_lst.append(proportion_of_nonzeros)
+            #matplotlib.rcParams.update({'font.size': 22})
+            fig=plt.figure(figsize=(6,6))
+            ax=fig.add_subplot(111)
+            ax.semilogy(range(1,151), prop_lst,'o')
+            ax.set_xlabel('component order')
+            ax.set_ylabel('number of neurons')
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            plt.title(filename[len(self.save_path):])
 
