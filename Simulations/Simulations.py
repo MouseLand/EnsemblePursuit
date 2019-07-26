@@ -190,6 +190,18 @@ class Simulations():
         plt.show()
 
         return corrs_V_orig_fit
+    
+    def target_corr_vs_nr_neurons(self):
+        corrs_V_orig_fit=self.V_corr_mat(model_string='EnsemblePursuit')
+        corrs=[]
+        n_neurons=[]
+        for comp in range(0,self.U.shape[1]):
+            corrs.append(np.max(corrs_V_orig_fit[comp,:]))
+            u=self.U[:,comp]
+            u[u!=0]=1
+            n_neurons.append(u.sum())
+        plt.scatter(corrs, n_neurons)
+        plt.show()
 
     def variance_explained_one_component(self,component_index):
         approx=(self.U[:,component_index].reshape(self.U.shape[0],1)@self.V[component_index,:].reshape(1,self.V.shape[1])).flatten()
@@ -275,7 +287,7 @@ class Simulations():
     def run_and_fit(self,model_string,nr_components,nr_timepoints,nr_neurons,lambd=0):
         np.random.seed(7)
         #X=self.simulate_data(nr_components,nr_timepoints,nr_neurons)
-        X=self.simulate_data_w_noise(nr_components,nr_timepoints,nr_neurons,noise_ampl_mult=1)
+        X=self.simulate_data_w_noise(nr_components,nr_timepoints,nr_neurons,noise_ampl_mult=4)
         if model_string=='EnsemblePursuit':
             options_dict={'seed_neuron_av_nr':10,'min_assembly_size':1}
 
@@ -304,7 +316,7 @@ class Simulations():
            self.U=spca.components_.T
         if model_string=='NMF':
            X-=X.min(axis=0)
-           nmf=NMF(n_components=nr_components, init='nndsvd', random_state=7)
+           nmf=NMF(n_components=nr_components, init='nndsvd', random_state=7,alpha=lambd,l1_ratio=0.5)
            self.V=nmf.fit_transform(X.T).T
            self.U=nmf.components_.T
         if model_string=='LDA':
