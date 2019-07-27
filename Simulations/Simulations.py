@@ -330,3 +330,20 @@ class Simulations():
         print('orig',self.orig.shape)
         print('approx',self.approx.shape)
 
+class SimulationTests():
+    def V_corr_mat_test(self):
+        np.random.seed(7)
+        sim=Simulations()
+        sim.V_orig=np.random.normal(loc=1,scale=1,size=(2,500))
+        sim.V=np.random.normal(loc=1,scale=1,size=(2,500))
+        corr_00=np.corrcoef(sim.V_orig[0,:],sim.V[0,:])[0,1]
+        corr_10=np.corrcoef(sim.V_orig[1,:],sim.V[0,:])[0,1]
+        corr_01=np.corrcoef(sim.V_orig[0,:],sim.V[1,:])[0,1]
+        corr_11=np.corrcoef(sim.V_orig[1,:],sim.V[1,:])[0,1]
+        corrmat=sim.V_corr_mat('EnsemblePursuit')
+        assert corrmat[0,0]==corr_00
+        assert corrmat[1,0]==corr_10
+        assert corrmat[0,1]==corr_01
+        assert corrmat[1,1]==corr_11
+
+
