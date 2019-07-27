@@ -150,9 +150,9 @@ class Simulations():
                 if i!=j:
                     corrs_V_original[j,i]=np.corrcoef(self.V_orig[j,:],self.V_orig[i,:])[0,1]
                     corrs_V_fitted[j,i]=np.corrcoef(self.V[j,:],self.V[i,:])[0,1]
-        max_corrs_orig=np.max(corrs_V_original,axis=1)
-        max_corrs_fitted=np.max(corrs_V_fitted,axis=1)
-        max_corrs_orig_fit=np.max(corrs_V_orig_fit,axis=1)
+        max_corrs_orig=np.max(corrs_V_original,axis=0)
+        max_corrs_fitted=np.max(corrs_V_fitted,axis=0)
+        max_corrs_orig_fit=np.max(corrs_V_orig_fit,axis=0)
         plt.figure(figsize=(15,8))
         plt.subplot(231)
         ax1=plt.subplot(2,3,1)
@@ -183,7 +183,7 @@ class Simulations():
         plt.title('Max corrs V_fitted')
         ax6=plt.subplot(2,3,6)
         ax6.hist(max_corrs_orig_fit)
-        plt.title('Orig vs fitted max corrs')
+        plt.title('Best correlation of fitted ensemble with an original')
         plt.axvline(np.median(max_corrs_orig_fit),color='r')
         ax6.text(0.55,0.8,'Median '+str(np.median(max_corrs_orig_fit))[0:4],transform=ax6.transAxes)
         plt.subplots_adjust(wspace=0.6,hspace=0.5)
@@ -195,12 +195,20 @@ class Simulations():
         corrs_V_orig_fit=self.V_corr_mat(model_string='EnsemblePursuit')
         corrs=[]
         n_neurons=[]
+        n_neurons_=[]
+        max_corrs=np.max(corrs_V_orig_fit,axis=0)
         for comp in range(0,self.U.shape[1]):
-            corrs.append(np.max(corrs_V_orig_fit[comp,:]))
-            u=self.U[:,comp]
+            #corrs.append(np.max(corrs_V_orig_fit[:,comp]))
+            u=self.U[:,comp].copy()
             u[u!=0]=1
+            u_=self.U_orig[:,comp].copy()
+            u_[u_!=0]=1
             n_neurons.append(u.sum())
-        plt.scatter(corrs, n_neurons)
+            n_neurons_.append(u_.sum())
+        #plt.hist(n_neurons)
+        #plt.show()
+        #plt.hist(n_neurons_)
+        plt.scatter(max_corrs, n_neurons)
         plt.show()
 
     def variance_explained_one_component(self,component_index):
