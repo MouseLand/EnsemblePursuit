@@ -146,9 +146,9 @@ class Simulations():
         corrs_V_orig_fit=np.zeros((self.V.shape[0],self.V.shape[0]))
         for j in range(0,self.V.shape[0]):
             for i in range(0,self.V.shape[0]):
-                if j!=i:
+                corrs_V_orig_fit[j,i]=np.corrcoef(self.V_orig[j,:],self.V[i,:])[0,1]
+                if i!=j:
                     corrs_V_original[j,i]=np.corrcoef(self.V_orig[j,:],self.V_orig[i,:])[0,1]
-                    corrs_V_orig_fit[j,i]=np.corrcoef(self.V_orig[j,:],self.V[i,:])[0,1]
                     corrs_V_fitted[j,i]=np.corrcoef(self.V[j,:],self.V[i,:])[0,1]
         max_corrs_orig=np.max(corrs_V_original,axis=1)
         max_corrs_fitted=np.max(corrs_V_fitted,axis=1)
