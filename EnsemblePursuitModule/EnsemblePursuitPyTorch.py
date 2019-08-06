@@ -62,7 +62,7 @@ class EnsemblePursuitPyTorch():
             max_cost_delta=1000
             C_summed_unnorm=0
             max_delta_neuron=seed
-            while max_cost_delta>0:
+            while max_delta_cost>0:
                 #Add the x corresponding to the max delta neuron to C_sum. Saves computational 
                 #time.
                 C_summed_unnorm=self.sum_C(C_summed_unnorm,C,max_delta_neuron)
