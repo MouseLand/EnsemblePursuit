@@ -59,7 +59,7 @@ class EnsemblePursuitPyTorch():
             current_v=X[seed,:].flatten()
             current_v_unnorm=current_v.clone()
             #Fake cost to initiate while loop
-            max_cost_delta=1000
+            max_delta_cost=1000
             C_summed_unnorm=0
             max_delta_neuron=seed
             while max_delta_cost>0:
