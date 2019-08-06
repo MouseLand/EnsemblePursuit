@@ -73,7 +73,7 @@ class EnsemblePursuitPyTorch():
                 masked_cost_delta=self.mask_cost_delta(selected_neurons,cost_delta)
                 max_delta_neuron=masked_cost_delta.argmax()
                 max_delta_cost=masked_cost_delta.max()
-                if max_delta_cost>0:
+                if max_delta_cost.item()>0:
                     selected_neurons[max_delta_neuron]=1
                     current_v_unnorm= self.sum_v(current_v_unnorm,max_delta_neuron,X)
                     n+=1
