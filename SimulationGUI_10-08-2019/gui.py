@@ -53,6 +53,34 @@ class MainW(QtGui.QMainWindow):
         imv.setImage(data)
         self.show()
 
+    def plot_squares_scatter(self):
+        data=np.load(self.path).T
+        view = pg.GraphicsLayoutWidget()  ## GraphicsView with GraphicsLayout inserted by default
+        self.setCentralWidget(view)
+        w = view.addPlot()
+        s = pg.ScatterPlotItem(pxMode=False)   ## Set pxMode=False to allow spots to transform with the view
+        squares = []
+        for i in range(10):
+            for j in range(10):
+                squares.append({'pos': (1e-6*i, 1e-6*j), 'size': 1e-6, 'pen': {'color': 'w', 'width': 2}, 'brush':pg.intColor(i*10+j, 100),'data':data[i,:][:10000].reshape((100,100))})
+        s.addPoints(squares)
+        w.addItem(s)
+        self.show()
+
+    def plot_squares_layout(self):
+        data=np.load(self.path).T
+        view = pg.GraphicsLayoutWidget()  ## GraphicsView with GraphicsLayout inserted by default
+        self.setCentralWidget(view)
+        for i in range(10):
+            for j in range(10):
+                imv = pg.ImageView()
+                imv.setImage(data[i,:][:10000].reshape((100,100)))
+                view.addItem(imv)
+                view.nextRow()
+                view.nextColumn()
+        self.show()
+
+
 
 
 app=QApplication(sys.argv)
@@ -60,5 +88,7 @@ window=MainW()
 window.set_layout()
 #window.plot_U()
 #window.plot_U_im()
-window.plot_square()
+#window.plot_square()
+#window.plot_squares_scatter()
+window.plot_squares_layout()
 sys.exit(app.exec_())
