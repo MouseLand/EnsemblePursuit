@@ -35,7 +35,7 @@ class MainW(QtGui.QMainWindow):
         #self.win.show()
 
     def plot_U_im(self):
-        data=np.load(self.path)[:1000,:1000]
+        data=np.load(self.path)[:1000,:1000].T
         print(data.shape)
         imv = pg.ImageView()
         self.setCentralWidget(imv)
@@ -44,10 +44,21 @@ class MainW(QtGui.QMainWindow):
         #self.l0.addWidget(self.image_view, 0, 0)
         #self.show()
 
+    def plot_square(self):
+        data=np.load(self.path)[:10000,0]
+        print(data.shape)
+        data=data.reshape((100,100))
+        imv = pg.ImageView()
+        self.setCentralWidget(imv)
+        imv.setImage(data)
+        self.show()
+
+
 
 app=QApplication(sys.argv)
 window=MainW()
 window.set_layout()
 #window.plot_U()
-window.plot_U_im()
+#window.plot_U_im()
+window.plot_square()
 sys.exit(app.exec_())
