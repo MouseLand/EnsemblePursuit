@@ -20,12 +20,14 @@ from scipy import io
 import matplotlib
 
 class ModelPipelineSingleMouse():
-    def __init__(self,data_path, mouse_filename,model,nr_of_components,lambd_=None,save=False):
+    def __init__(self,data_path, mouse_filename,model,nr_of_components,lambd_=None,save=False,save_path=None):
         self.data_path=data_path
         self.model=model
         self.lambd_=lambd_
         self.nr_of_components=nr_of_components
         self.mouse_filename=mouse_filename
+        self.save=save
+        self.save_path=save_path
 
     def fit_model(self):
         data = io.loadmat(self.data_path+self.mouse_filename)
@@ -40,7 +42,48 @@ class ModelPipelineSingleMouse():
             end=time.time()
             tm=end-start
             print('Time', tm)
-            if save=True
+            if self.save==True:
                 np.save(self.save_path+filename+'_V_ep_numpy.npy',V)
                 np.save(self.save_path+filename+'_U_ep_numpy.npy',U)
             return U,V
+
+    def knn(self,V):
+        columns=['Experiment','accuracy']
+        acc_df=pd.DataFrame(columns=columns)
+        istim=io.loadmat(self.data_path+self.mouse_filename)['stim']['istim'][0][0].astype(np.int32)
+        istim -= 1 # get out of MATLAB convention
+        istim = istim[:,0]
+        nimg = istim.max() # these are blank stims (exclude them)
+        V = V[istim<nimg, :]
+        istim = istim[istim<nimg]
+        x_train,x_test,y_train,y_test=test_train_split(V,istim)
+        acc=evaluate_model_torch(x_train,x_test)
+        acc_df=acc_df.append({'Experiment':self.mouse_filename,'accuracy':acc},ignore_index=True)
+        pd.options.display.max_colwidth = 300
+        print(acc_df)
+        return acc_df
+
+    def fit_ridge(self,V):
+        images=io.loadmat(self.data_path+'images/images_natimg2800_all.mat')['imgs']
+        images=images.transpose((2,0,1))
+        images=images.reshape((2800,68*270))
+        from utils import PCA
+        reduced_images=PCA(images)
+        stim=io.loadmat(self.data_path+self.mouse_filename)['stim']['istim'][0][0].astype(np.int32)
+        x_train,x_test,y_train,y_test=test_train_split(V,stim)
+        y_train=y_train-1
+        reduced_images_=reduced_images[y_train]
+        for alpha in [5000]:
+            assembly_array=[]
+            for assembly in range(0,self.nr_of_components):
+                av_resp=(x_train[:,assembly].T+x_test[:,assembly].T)/2
+                reg=ridge_regression(reduced_images_,av_resp,alpha=alpha)
+                assembly_array.append(reg)
+            assembly_array=np.array(assembly_array)
+            if self.save==True:
+                if self.model=='EnsemblePursuit_numpy':
+                    file_string=self.save_path+self.mouse_filename+'_ep_numpy_'+str(alpha)+'reg.npy'
+                if self.model=='EnsemblePursuit_pytorch':
+                    file_string=self.save_path+self.mouse_filename+'_ep_pytorch_'+str(alpha)+'reg.npy'
+                np.save(file_string)
+        return assembly_array
