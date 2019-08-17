@@ -20,7 +20,7 @@ from scipy import io
 import matplotlib
 
 class ModelPipelineSingleMouse():
-    def __init__(self,data_path, mouse_filename,model,nr_of_components,lambd_=None):
+    def __init__(self,data_path, mouse_filename,model,nr_of_components,lambd_=None,save=False):
         self.data_path=data_path
         self.model=model
         self.lambd_=lambd_
@@ -40,3 +40,7 @@ class ModelPipelineSingleMouse():
             end=time.time()
             tm=end-start
             print('Time', tm)
+            if save=True
+                np.save(self.save_path+filename+'_V_ep_numpy.npy',V)
+                np.save(self.save_path+filename+'_U_ep_numpy.npy',U)
+            return U,V
