@@ -87,3 +87,20 @@ class ModelPipelineSingleMouse():
                     file_string=self.save_path+self.mouse_filename+'_ep_pytorch_'+str(alpha)+'reg.npy'
                 np.save(file_string)
         return assembly_array
+
+    def plot_all_receptive_fields(self,assembly_array):
+        first_dim=10
+        second_dim=self.nr_of_components//10
+        assembly_array=assembly_array.reshape(first_dim,second_dim,18360)
+        fig=plt.figure(figsize=(first_dim,second_dim))
+        ax=[]
+        i=0
+        for ind1 in range(0,first_dim):
+            for ind2 in range(0,second_dim):
+                ax=fig.add_axes([ind1/first_dim,ind2/second_dim,1./first_dim,1./second_dim])
+                ax.imshow(assembly_array[ind1,ind2,:].reshape(68,270),cmap=plt.get_cmap('bwr'))
+                ax.set_xticks([])
+                ax.set_yticks([])
+                ax.text(x=ind1/first_dim,y=ind2/second_dim,s=str(i))
+                i+=1
+        plt.show()
