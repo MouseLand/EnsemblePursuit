@@ -69,15 +69,15 @@ class MainW(QtGui.QMainWindow):
 
     def plot_squares_layout(self):
         data=np.load(self.path).T
-        view = pg.GraphicsLayoutWidget()  ## GraphicsView with GraphicsLayout inserted by default
-        self.setCentralWidget(view)
+        view = pg.GraphicsLayout()  ## GraphicsView with GraphicsLayout inserted by default
+        self.view.setCentralItem(view)
         for i in range(10):
             for j in range(10):
-                imv = pg.ImageView()
+                imv = pg.ImageItem()
                 imv.setImage(data[i,:][:10000].reshape((100,100)))
-                view.addItem(imv)
-                view.nextRow()
-                view.nextColumn()
+                view.addViewBox(imv)
+                #view.nextRow()
+                #view.nextColumn()
         self.show()
 
 
