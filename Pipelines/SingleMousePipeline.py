@@ -107,6 +107,7 @@ class ModelPipelineSingleMouse():
 
     def variance_explained_across_neurons(self,U,V):
         '''
+        From sklearn:
         The coefficient R^2 is defined as (1 - u/v), where u is the residual sum of squares
         ((y_true - y_pred) ** 2).sum() and v is the total sum of squares
         ((y_true - y_true.mean()) ** 2).sum().
