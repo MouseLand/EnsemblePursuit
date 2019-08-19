@@ -40,15 +40,20 @@ class MainW(QtGui.QMainWindow):
         self.p0.addItem(self.U)
         self.p0.setAspectLocked(ratio=1)
         self.plot_U()
-        ROI = pg.InfiniteLine(movable=True)
-        self.p0.addItem(ROI)
+        self.U_ROI = pg.InfiniteLine(movable=True)
+        self.p0.addItem(self.U_ROI)
 
         def getcoordinates(roi):
             val = roi.value()
             print(val)
             print(np.floor(val))
+            non_z_U=np.nonzero(self.U_dat[int(np.floor(val))].flatten())
+            print(non_z_U)
+            X=self.X_dat[non_z_U[0],:]
+            print(X)
+            self.X.setImage(X)
 
-        ROI.sigPositionChangeFinished.connect(getcoordinates)
+        self.U_ROI.sigPositionChangeFinished.connect(getcoordinates)
 
         #Selected X's
         self.p1 = self.win.addPlot(title="X",row=1, col=2, colspan=3,
@@ -69,14 +74,14 @@ class MainW(QtGui.QMainWindow):
         self.win.show()
 
     def plot_U(self):
-        U=np.load(self.path_U)[:100,:100]
-        self.U.setImage(U)
+        self.U_dat=np.load(self.path_U)[:100,:100]
+        self.U.setImage(self.U_dat)
 
 
     def plot_X(self):
         data = io.loadmat(self.path_X)
-        X = data['stim'][0]['resp'][0][:1000,:1000]
-        self.X.setImage(X)
+        self.X_dat=data['stim'][0]['resp'][0][:1000,:1000]
+        self.X.setImage(self.X_dat)
         return 0
 
 app=QApplication(sys.argv)
