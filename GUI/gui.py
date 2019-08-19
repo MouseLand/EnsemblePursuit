@@ -43,6 +43,13 @@ class MainW(QtGui.QMainWindow):
         ROI = pg.InfiniteLine(movable=True)
         self.p0.addItem(ROI)
 
+        def getcoordinates(roi):
+            val = roi.value()
+            print(val)
+            print(np.floor(val))
+
+        ROI.sigPositionChangeFinished.connect(getcoordinates)
+
         #Selected X's
         self.p1 = self.win.addPlot(title="X",row=1, col=2, colspan=3,
                                    rowspan=3, invertY=True, padding=0)
