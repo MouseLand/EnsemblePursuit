@@ -40,6 +40,8 @@ class MainW(QtGui.QMainWindow):
         self.p0.addItem(self.U)
         self.p0.setAspectLocked(ratio=1)
         self.plot_U()
+        ROI = pg.InfiniteLine(movable=True)
+        self.p0.addItem(ROI)
 
         #Selected X's
         self.p1 = self.win.addPlot(title="X",row=1, col=2, colspan=3,
