@@ -52,6 +52,7 @@ class MainW(QtGui.QMainWindow):
             X=self.X_dat[non_z_U[0],:]
             print(X)
             self.X.setImage(X)
+            self.pfull.plot(self.V_dat[int(np.floor(val)),:].flatten())
 
         self.U_ROI.sigPositionChangeFinished.connect(getcoordinates)
 
@@ -68,8 +69,9 @@ class MainW(QtGui.QMainWindow):
         print(self.path_X)
 
     def plot_V(self):
-        data = np.load(self.path_V)[:1000, :1000].T
-        self.V.setImage(data)
+        self.V_dat = np.load(self.path_V).T
+        print(self.V_dat.shape)
+        self.pfull.plot(self.V_dat[0,:])
         self.show()
         self.win.show()
 
