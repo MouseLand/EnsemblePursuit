@@ -6,6 +6,7 @@ sys.path.append("..")
 from EnsemblePursuitModule.EnsemblePursuitPyTorch import EnsemblePursuitPyTorch
 from EnsemblePursuitModule.EnsemblePursuitNumpy import EnsemblePursuitNumpy
 #from EnsemblePursuitNumpy import EnsemblePursuitNumpy
+from EnsemblePursuitModule.EnsemblePursuitNumpyVarExp import EnsemblePursuitNumpyVarExp
 from sklearn.decomposition import SparsePCA
 from sklearn.decomposition import FastICA
 from sklearn.decomposition import NMF
@@ -37,6 +38,19 @@ class ModelPipelineSingleMouse():
             X=subtract_spont(spont,resp).T
             options_dict={'seed_neuron_av_nr':100,'min_assembly_size':8}
             ep_np=EnsemblePursuitNumpy(n_ensembles=self.nr_of_components,lambd=self.lambd_,options_dict=options_dict)
+            start=time.time()
+            U,V=ep_np.fit_transform(X)
+            end=time.time()
+            tm=end-start
+            print('Time', tm)
+            if self.save==True:
+                np.save(self.save_path+filename+'_V_ep_numpy.npy',V)
+                np.save(self.save_path+filename+'_U_ep_numpy.npy',U)
+            return U,V
+        if self.model=='EnsemblePursuit_numpy_var_exp':
+            X=subtract_spont(spont,resp).T
+            options_dict={'seed_neuron_av_nr':100,'min_assembly_size':8}
+            ep_np=EnsemblePursuitNumpyVarExp(n_ensembles=self.nr_of_components,lambd=self.lambd_,options_dict=options_dict)
             start=time.time()
             U,V=ep_np.fit_transform(X)
             end=time.time()
@@ -137,3 +151,26 @@ class ModelPipelineSingleMouse():
 
 
     #def variance_explained_across_components(self,U,V):
+
+    def sparsity(self,U):
+        prop_lst=[]
+        for j in range(0,self.nr_of_components):
+            #Set small numbers to zero
+            U[U<0.000001]=0
+            if self.model=='EnsemblePursuit_pytorch' or self.model=='EnsemblePursuit_numpy' or self.model=='EnsemblePursuit_adaptive' or self.model=='EnsemblePursuit_numpy_var_exp':
+                proportion_of_nonzeros=np.sum(U[:,j]!=0)
+            else:
+                proportion_of_nonzeros=np.sum(U[j,:]!=0)
+            prop_lst.append(proportion_of_nonzeros)
+            #matplotlib.rcParams.update({'font.size': 22})
+        if self.model=='EnsemblePursuit_numpy_var_exp':
+            plt.plot(prop_lst,'o')
+        else:
+            fig=plt.figure(figsize=(6,6))
+            ax=fig.add_subplot(111)
+            ax.semilogy(range(1,len(prop_lst)+1), prop_lst,'o')
+            ax.set_xlabel('component order')
+            ax.set_ylabel('number of neurons')
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            ax.set_facecolor('w')
