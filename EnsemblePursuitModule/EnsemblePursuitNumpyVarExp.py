@@ -20,7 +20,7 @@ class EnsemblePursuitNumpyVarExp():
         return cost_delta
 
     def calculate_variance_explained(self,current_v,current_v_):
-        threshold=0.05
+        threshold=0.01
         var_exp=1-np.var(current_v_,axis=0)/np.var(current_v,axis=0)
         print(var_exp)
         if var_exp>threshold:
@@ -92,7 +92,6 @@ class EnsemblePursuitNumpyVarExp():
                     current_v=current_v_
                 else:
                     break
-
             safety_it+=1
             #Increase number of neurons to sample from if while loop hasn't been finding any assemblies.
             if safety_it>0:
@@ -105,6 +104,7 @@ class EnsemblePursuitNumpyVarExp():
                 self.n_neurons_for_sampling=1000
             if safety_it>1600:
                 raise ValueError('Assembly capacity too big, can\'t fit model')
+        print(n)
         current_u=np.zeros((X.shape[0],1))
         current_u[selected_neurons,0]=np.clip(C_summed[selected_neurons],a_min=0,a_max=None)/(current_v**2).sum()
         self.U=np.concatenate((self.U,current_u),axis=1)
