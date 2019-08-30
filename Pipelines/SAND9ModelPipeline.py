@@ -1,7 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from EnsemblePursuitPyTorch import EnsemblePursuitPyTorch
-from EnsemblePursuitNumpy import EnsemblePursuitNumpy
+#from EnsemblePursuitPyTorch_threshold import EnsemblePursuitPyTorch
+import sys
+sys.path.append("..")
+from EnsemblePursuitModule.EnsemblePursuitPyTorch import EnsemblePursuitPyTorch
+#from EnsemblePursuitNumpy import EnsemblePursuitNumpy
 from sklearn.decomposition import SparsePCA
 from sklearn.decomposition import FastICA
 from sklearn.decomposition import NMF
@@ -22,7 +25,8 @@ class ModelPipeline():
         self.model=model
         self.lambd_=lambd_
         self.nr_of_components=nr_of_components
-        self.mat_file_lst=['natimg2800_M170717_MP034_2017-09-11.mat','natimg2800_M160825_MP027_2016-12-14.mat','natimg2800_M161025_MP030_2017-05-29.mat','natimg2800_M170604_MP031_2017-06-28.mat','natimg2800_M170714_MP032_2017-09-14.mat','natimg2800_M170714_MP032_2017-08-07.mat','natimg2800_M170717_MP033_2017-08-20.mat']
+        self.mat_file_lst=['natimg2800_M170717_MP034_2017-09-11.mat','natimg2800_M160825_MP027_2016-12-14.mat']#'natimg2800_M161025_MP030_2017-05-29.mat','natimg2800_M170604_MP031_2017-06-28.mat','natimg2800_M170714_MP032_2017-09-14.mat','natimg2800_M170714_MP032_2017-08-07.mat','natimg2800_M170717_MP033_2017-08-20.mat']
+        #self.mat_file_lst=['natimg2800_M161025_MP030_2017-05-29.mat','natimg2800_M170604_MP031_2017-06-28.mat','natimg2800_M170714_MP032_2017-09-14.mat','natimg2800_M170714_MP032_2017-08-07.mat','natimg2800_M170717_MP033_2017-08-20.mat']
 
 
     def fit_model(self):
@@ -55,6 +59,18 @@ class ModelPipeline():
                 np.save(self.save_path+filename+'_V_ep_pytorch.npy',V)
                 np.save(self.save_path+filename+'_U_ep_pytorch.npy',U)
                 np.save(self.save_path+filename+'_timing_ep_pytorch.npy',tm)
+            if self.model=='EnsemblePursuit_adaptive':
+                X=subtract_spont(spont,resp).T
+                options_dict={'seed_neuron_av_nr':100,'min_assembly_size':8}
+                ep_pt=EnsemblePursuitPyTorch(n_ensembles=self.nr_of_components,lambd=self.lambd_,options_dict=options_dict)
+                start=time.time()
+                U,V=ep_pt.fit_transform(X)
+                end=time.time()
+                tm=end-start
+                print('Time', tm)
+                np.save(self.save_path+filename+'_V_ep_adaptive.npy',V)
+                np.save(self.save_path+filename+'_U_ep_adaptive.npy',U)
+
             if self.model=='SparsePCA':
                 X=subtract_spont(spont,resp)
                 X=zscore(X)
@@ -98,6 +114,8 @@ class ModelPipeline():
              model_string='*_V_lda.npy'
        if self.model=='NMF_regularization_experiments':
             model_string='*_V_NMF_regularization_experiments.npy'
+       if self.model=='EnsemblePursuit_adaptive':
+            model_string='*_V_ep_adaptive.npy'
        if self.model=='all':
              #self.save_path=self.data_path
              model_string='*.mat'
@@ -120,9 +138,9 @@ class ModelPipeline():
                  acc_df=acc_df.append({'Experiment':filename[len(self.save_path):],'accuracy':acc},ignore_index=True)
              if self.model=='NMF_regularization_experiments':
                  acc_df=acc_df.append({'Experiment':filename[len(self.save_path):],'accuracy':acc, 'alpha':filename[:-19][-1:]},ignore_index=True)
-       grouped=acc_df.groupby(['alpha']).mean()
-       print(grouped)
-       print(grouped.describe())
+       #grouped=acc_df.groupby(['alpha']).mean()
+       #print(grouped)
+       #print(grouped.describe())
        pd.options.display.max_colwidth = 300
        print(acc_df)
        print(acc_df.describe())
@@ -146,6 +164,8 @@ class ModelPipeline():
             model_string='*V_pca.npy'
         if self.model=='LDA':
             model_string='*_V_lda.npy'
+        if self.model=='EnsemblePursuit_adaptive':
+            model_string='*_V_ep_adaptive.npy'
         for filename in glob.glob(os.path.join(self.save_path, model_string)):
             print(filename)
             istim_path=filename[len(self.save_path):len(self.save_path)+len(self.mat_file_lst[0])]
@@ -174,6 +194,8 @@ class ModelPipeline():
                     file_string=self.save_path+istim_path+'_pca_reg.npy'
                 if self.model=='LDA':
                     file_string=self.save_path+istim_path+'_lda_reg.npy'
+                if self.model=='EnsemblePursuit_adaptive':
+                    file_string=self.save_path+istim_path+'_ep_adaptive_reg.npy'
                 np.save(file_string,assembly_array)
 
     def plot_all_receptive_fields(self):
@@ -189,6 +211,8 @@ class ModelPipeline():
             model_string='*_lda_reg.npy'
         if self.model=='ICA':
             model_string='*_ica_reg.npy'
+        if self.model=='EnsemblePursuit_adaptive':
+            model_string='*_ep_adaptive_reg.npy'
         for filename in glob.glob(os.path.join(self.save_path, model_string)):
             print(filename)
             assembly_array=np.load(filename)
@@ -231,13 +255,15 @@ class ModelPipeline():
     def check_sparsity(self):
         if self.model=='NMF_regularization_experiments':
             model_string='*U_NMF_reg_exps.npy'
+        if self.model=='EnsemblePursuit_adaptive':
+            model_string='*U_ep_adaptive.npy'
         for filename in glob.glob(os.path.join(self.save_path, model_string)):
             U=np.load(filename)
             prop_lst=[]
             for j in range(0,self.nr_of_components):
                 #Set small numbers to zero
                 U[U<0.000001]=0
-                if self.model=='EnsemblePursuit_pytorch' or self.model=='EnsemblePursuit_numpy':
+                if self.model=='EnsemblePursuit_pytorch' or self.model=='EnsemblePursuit_numpy' or self.model=='EnsemblePursuit_adaptive':
                     proportion_of_nonzeros=np.sum(U[:,j]!=0)
                 else:
                     proportion_of_nonzeros=np.sum(U[j,:]!=0)
@@ -250,5 +276,17 @@ class ModelPipeline():
             ax.set_ylabel('number of neurons')
             ax.spines['top'].set_visible(False)
             ax.spines['right'].set_visible(False)
+            ax.set_facecolor('w')
             plt.title(filename[len(self.save_path):])
+
+    def ensemble_cross_val(self):
+        model_string='*_V_ep_pytorch.npy'
+        for filename in glob.glob(os.path.join(self.save_path, model_string)):
+            print(filename)
+            istim_path=filename[len(self.save_path):len(self.save_path)+len(self.mat_file_lst[0])]
+            stim=io.loadmat(self.data_path+istim_path)['stim']['istim'][0][0]
+            #test train split
+            components=np.load(filename)
+            x_train,x_test,y_train,y_test=test_train_split(components,stim)
+       
 

@@ -196,6 +196,8 @@ class ModelPipeline():
             model_string='*_U_pca.npy'
         if self.model=='LDA':
             model_string='*_U_lda.npy'
+       
+        
         all_mice=[]
         for filename in glob.glob(os.path.join(self.save_path, model_string)):
             print(filename)
@@ -203,6 +205,11 @@ class ModelPipeline():
             print(U)
             print(U.shape)
             prop_lst=[]
+            plt.hist(U.flatten())
+            plt.show()
+            print(U)
+            print(U[U<0.000001].shape[0]/(U.shape[0]*U.shape[1]))
+            '''
             for j in range(0,150):
                 proportion_of_nonzeros=np.sum(U[:,j]!=0)/U.shape[0]
                 #print(proportion_of_nonzeros)
@@ -222,6 +229,7 @@ class ModelPipeline():
             med=np.median(prop_lst)
             all_mice.append(med)
         print('Mean median sparsity all mice',np.mean(all_mice))
+        '''
                         
             
               

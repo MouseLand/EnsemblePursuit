@@ -1,11 +1,15 @@
-from EnsemblePursuitSimulations import EnsemblePursuitPyTorch
-from EnsemblePursuitWithCorrReturn import EnsemblePursuitNumpy
+import sys
+sys.path.append("..")
+from Simulations.EnsemblePursuitSimulations import EnsemblePursuitPyTorch
+from Simulations.EnsemblePursuitWithCorrReturn import EnsemblePursuitNumpy
 #from scipy.stats import zscore
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.decomposition import FastICA
 import seaborn as sns
 from sklearn.decomposition import PCA, SparsePCA, NMF, LatentDirichletAllocation
+from EnsemblePursuitModule.EnsemblePursuitPyTorchVarExp import EnsemblePursuitPyTorchVarExp
+from EnsemblePursuitModule.EnsemblePursuitNumpyVarExp import EnsemblePursuitNumpyVarExp
 
 class Simulations():
     def zscore(self,X):
@@ -23,6 +27,7 @@ class Simulations():
         V=np.random.normal(loc=0,scale=1,size=(nr_components,nr_timepoints))
         X=U@V
         X=self.zscore(X)
+        print(X.shape)
         self.U_orig=U
         self.V_orig=V
         plt.hist(np.sum(zeros_for_U,axis=0))
@@ -310,28 +315,34 @@ class Simulations():
             U,V,self.corrs=ep_np.fit_transform(X)
             self.U=U
             self.V=V.T
+        if model_string=='EnsemblePursuitVarExp':
+            options_dict={'seed_neuron_av_nr':10,'min_assembly_size':1}
+            ep_varexp=EnsemblePursuitNumpyVarExp(n_ensembles=nr_components,lambd=lambd,options_dict=options_dict)
+            U,V=ep_varexp.fit_transform(X)
+            self.U=U
+            self.V=V.T
         if model_string=='ICA':
-           ica=FastICA(n_components=nr_components,random_state=7)
-           self.V=ica.fit_transform(X.T).T
-           self.U=ica.mixing_
+            ica=FastICA(n_components=nr_components,random_state=7)
+            self.V=ica.fit_transform(X.T).T
+            self.U=ica.mixing_
         if model_string=='PCA':
-           pca=PCA(n_components=nr_components,random_state=7)
-           self.V=pca.fit_transform(X.T).T
-           self.U=pca.components_.T
+            pca=PCA(n_components=nr_components,random_state=7)
+            self.V=pca.fit_transform(X.T).T
+            self.U=pca.components_.T
         if model_string=='sparsePCA':
-           spca=SparsePCA(n_components=nr_components,random_state=7)
-           self.V=spca.fit_transform(X.T).T
-           self.U=spca.components_.T
+            spca=SparsePCA(n_components=nr_components,random_state=7)
+            self.V=spca.fit_transform(X.T).T
+            self.U=spca.components_.T
         if model_string=='NMF':
-           X-=X.min(axis=0)
-           nmf=NMF(n_components=nr_components, init='nndsvd', random_state=7,alpha=lambd,l1_ratio=0.5)
-           self.V=nmf.fit_transform(X.T).T
-           self.U=nmf.components_.T
+            X-=X.min(axis=0)
+            nmf=NMF(n_components=nr_components, init='nndsvd', random_state=7,alpha=lambd,l1_ratio=0.5)
+            self.V=nmf.fit_transform(X.T).T
+            self.U=nmf.components_.T
         if model_string=='LDA':
-           X-=X.min(axis=0)
-           nmf=LatentDirichletAllocation(n_components=nr_components,random_state=7)
-           self.V=nmf.fit_transform(X.T).T
-           self.U=nmf.components_.T
+            X-=X.min(axis=0)
+            nmf=LatentDirichletAllocation(n_components=nr_components,random_state=7)
+            self.V=nmf.fit_transform(X.T).T
+            self.U=nmf.components_.T
         print('SHPS', self.U.shape, self.V.shape)
         self.orig=X
         self.approx=self.U@self.V

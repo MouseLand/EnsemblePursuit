@@ -44,8 +44,8 @@ class ModelPipelineSingleMouse():
             tm=end-start
             print('Time', tm)
             if self.save==True:
-                np.save(self.save_path+filename+'_V_ep_numpy.npy',V)
-                np.save(self.save_path+filename+'_U_ep_numpy.npy',U)
+                np.save(self.save_path+self.mouse_filename+'_V_ep_numpy.npy',V)
+                np.save(self.save_path+self.mouse_filename+'_U_ep_numpy.npy',U)
             return U,V
         if self.model=='EnsemblePursuit_numpy_var_exp':
             X=subtract_spont(spont,resp).T
@@ -57,8 +57,8 @@ class ModelPipelineSingleMouse():
             tm=end-start
             print('Time', tm)
             if self.save==True:
-                np.save(self.save_path+filename+'_V_ep_numpy.npy',V)
-                np.save(self.save_path+filename+'_U_ep_numpy.npy',U)
+                np.save(self.save_path+self.mouse_filename+'_V_ep_numpy.npy',V)
+                np.save(self.save_path+self.mouse_filename+'_U_ep_numpy.npy',U)
             return U,V
 
     def knn(self,V):
@@ -76,6 +76,66 @@ class ModelPipelineSingleMouse():
         pd.options.display.max_colwidth = 300
         print(acc_df)
         return acc_df
+
+    def cross_validation(self):
+        data = io.loadmat(self.data_path+self.mouse_filename)
+        resp = data['stim'][0]['resp'][0]
+        spont =data['stim'][0]['spont'][0]
+        X=subtract_spont(spont,resp).T
+        istim=io.loadmat(self.data_path+self.mouse_filename)['stim']['istim'][0][0].astype(np.int32)
+        istim -= 1 # get out of MATLAB convention
+        istim = istim[:,0]
+        nimg = istim.max()
+        X=X[:,istim<nimg]
+        istim = istim[istim<nimg]
+        print(X.shape)
+        print(istim.shape)
+        x_train,x_test,y_train,y_test=test_train_split(X.T,istim)
+        print(x_train.shape)
+        if self.model=='EnsemblePursuit_numpy_var_exp':
+            options_dict={'seed_neuron_av_nr':100,'min_assembly_size':8}
+            ep_train=EnsemblePursuitNumpyVarExp(n_ensembles=self.nr_of_components,lambd=self.lambd_,options_dict=options_dict)
+            start=time.time()
+            U_train,V_train=ep_train.fit_transform(x_train.T)
+            end=time.time()
+            tm=end-start
+            print('Time', tm)
+            bundle={'U':U_train,'V':V_train,'mouse_name':self.mouse_filename,'time':tm}
+            if self.save==True:
+                np.save(self.save_path+self.mouse_filename+'_ep_varexp_train.npy',bundle)
+            options_dict={'seed_neuron_av_nr':100,'min_assembly_size':8}
+            ep_test=EnsemblePursuitNumpyVarExp(n_ensembles=self.nr_of_components,lambd=self.lambd_,options_dict=options_dict)
+            start=time.time()
+            U_test,V_test=ep_train.fit_transform(x_test.T)
+            end=time.time()
+            tm=end-start
+            print('Time', tm)
+            bundle={'U':U_test,'V':V_test,'mouse_name':self.mouse_filename,'time':tm}
+            if self.save==True:
+                np.save(self.save_path+self.mouse_filename+'_ep_varexp_test.npy',bundle)
+        if self.model=='EnsemblePursuit_numpy':
+            options_dict={'seed_neuron_av_nr':100,'min_assembly_size':8}
+            ep_train=EnsemblePursuitNumpy(n_ensembles=self.nr_of_components,lambd=self.lambd_,options_dict=options_dict)
+            start=time.time()
+            U_train,V_train=ep_train.fit_transform(x_train.T)
+            end=time.time()
+            tm=end-start
+            print('Time', tm)
+            bundle={'U':U_train,'V':V_train,'mouse_name':self.mouse_filename,'time':tm}
+            if self.save==True:
+                np.save(self.save_path+self.mouse_filename+'_ep_numpy_train.npy',bundle)
+            options_dict={'seed_neuron_av_nr':100,'min_assembly_size':8}
+            ep_test=EnsemblePursuitNumpy(n_ensembles=self.nr_of_components,lambd=self.lambd_,options_dict=options_dict)
+            start=time.time()
+            U_test,V_test=ep_train.fit_transform(x_test.T)
+            end=time.time()
+            tm=end-start
+            print('Time', tm)
+            bundle={'U':U_test,'V':V_test,'mouse_name':self.mouse_filename,'time':tm}
+            if self.save==True:
+                np.save(self.save_path+self.mouse_filename+'_ep_numpy_test.npy',bundle)
+
+
 
     def fit_ridge(self,V):
         images=io.loadmat(self.data_path+'images/images_natimg2800_all.mat')['imgs']
