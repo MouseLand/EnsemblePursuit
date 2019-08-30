@@ -3,6 +3,7 @@ import sys
 sys.path.append("..")
 from EnsemblePursuitModule.EnsemblePursuitPyTorch import EnsemblePursuitPyTorch
 from EnsemblePursuitModule.EnsemblePursuitNumpy import EnsemblePursuitNumpy
+import matplotlib.pyplot as plt
 
 class GammaSimulations():
     def zscore(self,X):
@@ -14,9 +15,11 @@ class GammaSimulations():
         return X.T
 
     def simulate_data(self,nr_components,nr_timepoints,nr_neurons):
+        k=5
+        theta=1./5
         zeros_for_U=np.random.choice([0,1], nr_neurons*nr_components, p=[1-0.01, 0.01]).reshape((nr_neurons,nr_components))
-        U=np.random.normal(loc=2,scale=1,size=(nr_neurons,nr_components))
-        U=np.abs(U*zeros_for_U)
+        U=np.random.gamma(shape=k,scale=theta,size=(nr_neurons,nr_components))
+        U=U*zeros_for_U
         V=np.random.normal(loc=0,scale=1,size=(nr_components,nr_timepoints))
         X=U@V
         X=self.zscore(X)
@@ -28,9 +31,11 @@ class GammaSimulations():
         return X
 
     def simulate_data_w_noise(self,nr_components,nr_timepoints,nr_neurons, noise_ampl_mult):
+        k=5
+        theta=1./5
         zeros_for_U=np.random.choice([0,1], nr_neurons*nr_components, p=[1-0.01, 0.01]).reshape((nr_neurons,nr_components))
-        U=np.random.normal(loc=2,scale=1,size=(nr_neurons,nr_components))
-        U=np.abs(U*zeros_for_U)
+        U=np.random.gamma(shape=k,scale=theta,size=(nr_neurons,nr_components))
+        U=U*zeros_for_U
         V=np.random.normal(loc=1,scale=1,size=(nr_components,nr_timepoints))
         X=U@V
         low_rank_std=np.std(X,axis=1)
