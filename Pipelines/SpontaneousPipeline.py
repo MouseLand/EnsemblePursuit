@@ -6,6 +6,7 @@ sys.path.append("..")
 from EnsemblePursuitModule.EnsemblePursuitPyTorch import EnsemblePursuitPyTorch
 from EnsemblePursuitModule.EnsemblePursuitNumpy import EnsemblePursuitNumpy
 #from EnsemblePursuitNumpy import EnsemblePursuitNumpy
+from utils import zscore
 from scipy import io
 import time
 import os
