@@ -10,6 +10,7 @@ For more details see the wiki https://github.com/mariakesa/EnsemblePursuit/wiki
 
 Ensembles learned using EnsemblePursuit from recordings in V1 have Gabor receptive fields. 
 
+<img src="https://github.com/mariakesa/EnsemblePursuit/blob/master/Figures/ep_rec_fields.png" height="200" width="200">
 ![alt text](https://github.com/mariakesa/EnsemblePursuit/blob/master/Figures/ep_rec_fields.png)
 
 Some ensembles are well explained by behavior PC's extracted from mouse orofacial movies.
