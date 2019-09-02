@@ -129,3 +129,29 @@ class SpontaneousBehaviorPipeline():
         ax.set_ylabel('fraction variance explained')
         ax.set_title('Component %d, varexp=%0.2f'%(ipc,varexp[ipc]))
         plt.show()
+
+    def variance_explained_across_neurons(self,U,V):
+        '''
+        The coefficient R^2 is defined as (1 - u/v), where u is the residual sum of squares
+        ((y_true - y_pred) ** 2).sum() and v is the total sum of squares
+        ((y_true - y_true.mean()) ** 2).sum().
+        '''
+        #Fetch the original data and convert it into the same form as what goes into the
+        #matrix factorization model
+        mt = sio.loadmat(self.data_path+self.mouse_filename) # neurons by timepoints
+        X = mt['Fsp']
+        X=zscore(X.T).T
+        u=[]
+        v=[]
+        approx=U@V.T
+        for j in range(X.shape[0]):
+            u_j=((X[j,:]-approx[j,:])**2).sum()
+            v_j=((X[j,:]-np.mean(X[j,:]))**2).sum()
+            u.append(u_j)
+            v.append(v_j)
+        u=np.array(u)
+        v=np.array(v)
+        plt.plot(-np.divide(u,v)+1)
+        plt.title('Variance explained across neurons')
+        plt.show()
+        print('Total variance explained, averaged over neurons is:',(1-np.mean(u)/np.mean(v)))
