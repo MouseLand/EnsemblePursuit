@@ -5,6 +5,7 @@ from EnsemblePursuitModule.EnsemblePursuitPyTorch import EnsemblePursuitPyTorch
 from EnsemblePursuitModule.EnsemblePursuitNumpy import EnsemblePursuitNumpy
 import matplotlib.pyplot as plt
 import seaborn as sns
+from NMF import fit_NMF
 
 class GammaSimulations():
     def zscore(self,X):
@@ -118,6 +119,10 @@ class GammaSimulations():
             U,V =ep_np.fit_transform(X)
             self.U=U
             self.V=V.T
+        if model_string=='NMF':
+            self.U,self.V=fit_NMF(X,nr_components,n_epoch=1000)
+
+
 
     def variance_explained_across_neurons(self):
         '''
@@ -153,7 +158,7 @@ class GammaSimulations():
         for j in range(0,nr_of_components):
             #Set small numbers to zero
             self.U[self.U<0.000001]=0
-            if model_string=='EnsemblePursuitNumpy':
+            if model_string=='EnsemblePursuitNumpy' or 'NMF':
                 proportion_of_nonzeros=np.sum(self.U[:,j]!=0)
                 proportion_of_nonzeros_orig=np.sum(self.U_orig[:,j]!=0)
             else:
