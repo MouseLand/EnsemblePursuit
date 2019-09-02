@@ -2,7 +2,7 @@
 
 Ensemble Pursuit is a matrix factorization algorithm that places that extracts sparse neural components of co-activating cells. 
 
-![alt text](https://github.com/mariakesa/EnsemblePursuit/blob/master/Figures/fig11.png=250x250)
+![alt text](https://github.com/mariakesa/EnsemblePursuit/blob/master/Figures/fig11.pn| width=100 height=100)
 
 The matrix U is a sparse matrix (because of an L0 penalty in the cost function) that encodes which neurons belong to a component. V is an average timecourse of these neurons, e.g. component time course.
 
