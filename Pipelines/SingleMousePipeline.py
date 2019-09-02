@@ -223,6 +223,7 @@ class ModelPipelineSingleMouse():
                 proportion_of_nonzeros=np.sum(U[j,:]!=0)
             prop_lst.append(proportion_of_nonzeros)
             #matplotlib.rcParams.update({'font.size': 22})
+        print('Mean sparsity',np.mean(prop_lst)/U.shape[0])
         plt.plot(prop_lst,'o')
         plt.show()
         fig=plt.figure(figsize=(6,6))
