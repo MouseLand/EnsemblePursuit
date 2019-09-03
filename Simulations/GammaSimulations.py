@@ -120,7 +120,7 @@ class GammaSimulations():
             self.U=U
             self.V=V.T
         if model_string=='NMF':
-            self.U,self.V=fit_NMF(X,nr_components,n_epoch=1000)
+            self.U,self.V=fit_NMF(X,nr_components,n_epoch=30000)
 
 
 
