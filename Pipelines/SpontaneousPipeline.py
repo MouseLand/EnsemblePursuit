@@ -12,6 +12,7 @@ import time
 import os
 import matplotlib
 import scipy.io as sio
+from sklearn.decomposition import NMF
 
 
 class SpontaneousBehaviorPipeline():
@@ -59,6 +60,23 @@ class SpontaneousBehaviorPipeline():
                 bundle={'U':U,'V':V}
                 np.save(self.save_path+self.mouse_filename+'_spont_ep_numpy.npy',bundle)
             return U,V
+        if self.model=='EnsemblePursuit_pytorch':
+            options_dict={'seed_neuron_av_nr':100,'min_assembly_size':8}
+            ep_np=EnsemblePursuitPyTorch(n_ensembles=self.nr_of_components,lambd=0.01,options_dict=options_dict)
+            U,V=ep_np.fit_transform(self.X)
+            if self.save==True:
+                bundle={'U':U,'V':V}
+                np.save(self.save_path+self.mouse_filename+'_spont_ep_numpy.npy',bundle)
+            return U,V
+        if self.model=='NMF':
+            print(self.X[self.X<0])
+            #self.X-=self.X.min(axis=0)
+            self.X[self.X<0]=0
+            self.X=self.X.T
+            model = NMF(n_components=self.nr_of_components, init='nndsvd', random_state=7)
+            V=model.fit_transform(self.X)
+            U=model.components_
+            return U.T,V
 
     def split_test_train(self):
         # split into train-test
@@ -104,7 +122,7 @@ class SpontaneousBehaviorPipeline():
         return Vpred,varexp
 
     def plot_var_exp(self,V,component_index=1):
-        if self.model=='EnsemblePursuit_numpy':
+        if self.model=='EnsemblePursuit_numpy' or 'NMF':
             V=V.T
         itrain, itest=self.split_test_train()
         Vpred,varexp=self.predict_neural_activity_using_behavior(V)
@@ -141,7 +159,8 @@ class SpontaneousBehaviorPipeline():
         #matrix factorization model
         mt = sio.loadmat(self.data_path+self.mouse_filename) # neurons by timepoints
         X = mt['Fsp']
-        X=zscore(X.T).T
+        if self.model=='EnsemblePursuit_pytorch' or self.model=='EnsemblePursuit_numpy':
+            X=zscore(X.T).T
         u=[]
         v=[]
         approx=U@V.T
@@ -162,7 +181,7 @@ class SpontaneousBehaviorPipeline():
         for j in range(0,self.nr_of_components):
             #Set small numbers to zero
             U[U<0.000001]=0
-            if self.model=='EnsemblePursuit_pytorch' or self.model=='EnsemblePursuit_numpy' or self.model=='EnsemblePursuit_adaptive' or self.model=='EnsemblePursuit_numpy_var_exp':
+            if self.model=='NMF' or self.model=='EnsemblePursuit_pytorch' or self.model=='EnsemblePursuit_numpy' or self.model=='EnsemblePursuit_adaptive' or self.model=='EnsemblePursuit_numpy_var_exp':
                 proportion_of_nonzeros=np.sum(U[:,j]!=0)
             else:
                 proportion_of_nonzeros=np.sum(U[j,:]!=0)
