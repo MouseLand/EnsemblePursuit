@@ -13,6 +13,8 @@ import os
 import matplotlib
 import scipy.io as sio
 from sklearn.decomposition import NMF
+from utils import zscore
+from sklearn.decomposition import FastICA
 
 
 class SpontaneousBehaviorPipeline():
@@ -77,6 +79,14 @@ class SpontaneousBehaviorPipeline():
             V=model.fit_transform(self.X)
             U=model.components_
             return U.T,V
+        if self.model=='ICA':
+            self.X=zscore(self.X)
+            self.X=self.X.T
+            ICA=FastICA(n_components=self.nr_of_components,random_state=7)
+            V=ICA.fit_transform(self.X)
+            U=ICA.components_
+            return U.T,V
+
 
     def split_test_train(self):
         # split into train-test
