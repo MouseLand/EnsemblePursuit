@@ -46,6 +46,7 @@ class EnsemblePursuitNumpyFast():
         C[selected_neurons,:]=C[selected_neurons,:]-cross_term
         ixgrid=np.ix_(~selected_neurons,selected_neurons)
         C[ixgrid]=C[ixgrid]-cross_term.T[~selected_neurons,:]
+        print(C)
         return C
 
     def fit_one_ensemble(self,X,C):
@@ -56,15 +57,13 @@ class EnsemblePursuitNumpyFast():
         self.n_neurons_for_sampling=1
         n=0
         min_assembly_size=self.options_dict['min_assembly_size']
-        safety_it=0
+        #index for switching between top neurons for fitting ensemble when the first neurons
+        #doesn't give large enough ensemble
+        index=-1
         #A while loop for trying sampling other neurons if the found ensemble size is smaller
         #than threshold.
         while n<min_assembly_size:
-            print(n)
-            if self.n_neurons_for_sampling>1:
-                 seed=self.repeated_seed(C)
-            else:
-                 seed=self.sorting_for_seed(C)
+            seed=self.repeated_seed(C,index)
             n=1
             current_v=X[seed,:]
             current_v_unnorm=current_v.copy()
@@ -93,18 +92,7 @@ class EnsemblePursuitNumpyFast():
                     current_v=(1./n)*current_v_unnorm
                 max_cost_delta=cost_delta
 
-            safety_it+=1
-            #Increase number of neurons to sample from if while loop hasn't been finding any assemblies.
-            if safety_it>0:
-                self.n_neurons_for_sampling=50
-            if safety_it>50:
-                self.n_neurons_for_sampling=100
-            if safety_it>100:
-                self.n_neurons_for_sampling=500
-            if safety_it>600:
-                self.n_neurons_for_sampling=1000
-            if safety_it>1600:
-                raise ValueError('Assembly capacity too big, can\'t fit model')
+            index+=-1
         print('nr of neurons in ensemble',n)
         current_u=np.zeros((X.shape[0],1))
         current_u[selected_neurons,0]=np.clip(C_summed[selected_neurons],a_min=0,a_max=None)/(current_v**2).sum()
@@ -112,25 +100,12 @@ class EnsemblePursuitNumpyFast():
         self.V=np.concatenate((self.V,current_v.reshape(1,self.sz[1])),axis=0)
         return current_u, current_v, C, selected_neurons
 
-    def repeated_seed(self,C):
+    def repeated_seed(self,C,index):
         nr_neurons_to_av=self.options_dict['seed_neuron_av_nr']
         sorted_similarities=np.sort(C,axis=1)[:,:-1][:,self.sz[0]-nr_neurons_to_av-1:]
         average_similarities=np.mean(sorted_similarities,axis=1)
         top_neurons=np.argsort(average_similarities)
-        sample_top_neuron=np.random.randint(0,self.n_neurons_for_sampling,size=1)
-        top_neurons=top_neurons[self.sz[0]-(self.n_neurons_for_sampling):]
-        seed=top_neurons[sample_top_neuron][0]
-        return seed
-
-    def sorting_for_seed(self,C):
-        '''
-        This function sorts the similarity matrix C to find neurons that are most correlated
-        to their nr_neurons_to_av neighbors (we average over the neighbors).
-        '''
-        nr_neurons_to_av=self.options_dict['seed_neuron_av_nr']
-        sorted_similarities=np.sort(C,axis=1)[:,:-1][:,self.sz[0]-nr_neurons_to_av-1:]
-        average_similarities=np.mean(sorted_similarities,axis=1)
-        seed=np.argmax(average_similarities)
+        seed=top_neurons[index]
         return seed
 
     def fit_transform(self,X):
