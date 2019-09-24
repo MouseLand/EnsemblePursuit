@@ -46,7 +46,6 @@ class EnsemblePursuitNumpyFast():
         C[selected_neurons,:]=C[selected_neurons,:]-cross_term
         ixgrid=np.ix_(~selected_neurons,selected_neurons)
         C[ixgrid]=C[ixgrid]-cross_term.T[~selected_neurons,:]
-        print(C)
         return C
 
     def fit_one_ensemble(self,X,C):
