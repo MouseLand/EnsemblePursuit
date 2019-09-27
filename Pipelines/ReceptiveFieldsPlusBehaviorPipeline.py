@@ -146,7 +146,7 @@ class ReceptiveFieldsPlusBehaviorPipeline():
         varexp = 1.0 - (Spred**2).mean(axis=-1)
 
         corr_lst=[]
-        for j in range(0,200):
+        for j in range(0,self.nr_of_components):
             corr_lst.append(np.corrcoef(Sp[j,itest],Spred[j,:])[0,1])
         print(corr_lst)
         return B0, corr_lst
@@ -172,4 +172,36 @@ class ReceptiveFieldsPlusBehaviorPipeline():
             #plt.title('PC %d'%(1+j))
             plt.axis('off')
 
+        plt.show()
+
+    def fit_to_behavior(self,V):
+        iframe = np.load(self.data_path+'iframe.npy')
+        spks= np.load(self.data_path+'spks.npy')
+        dt = 1 # time offset between stimulus presentation and response
+        ivalid = iframe+dt<spks.shape[-1] # remove timepoints outside the valid time range
+        iframe = iframe[ivalid]
+        del spks
+        proc = np.load(self.data_path+'cam1_TX39_2019_05_31_1_proc_resampled.npy', allow_pickle=True).item()
+        motSVD = proc['motSVD'][:,iframe+dt]
+        motSVD -= motSVD.mean(axis=1)[:,np.newaxis]
+        beh=motSVD
+        NT = motSVD.shape[1]
+        itrain,itest=self.train_test_split(NT)
+        covM = np.matmul(beh[:,itrain], beh[:,itrain].T)
+        lam = 1e5 # regularizer
+        covM += lam*np.eye(beh.shape[0])
+        A = np.linalg.solve(covM, np.matmul(beh[:,itrain], V.T[:,itrain].T))
+        print(beh.shape)
+        Vpred = np.matmul(A.T, beh[:,itest])
+        print(Vpred.shape)
+        varexp = 1 - ((Vpred - V.T[:,itest])**2).sum(axis=1)/(V.T[:,itest]**2).sum(axis=1)
+        corr_lst=[]
+        for j in range(0,self.nr_of_components):
+            corr_lst.append(np.corrcoef(Vpred[j,:],V.T[j,itest])[0,1])
+        return corr_lst
+
+    def selectivity_scatter_plot(self,corr_lst_stim,corr_lst_beh):
+        plt.scatter(corr_lst_stim,corr_lst_beh)
+        plt.xlabel('Correlations from stimulus predictions on test set')
+        plt.ylabel('Correlations from behavior predictions on test set')
         plt.show()
