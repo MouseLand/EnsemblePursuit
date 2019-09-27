@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import sys
 sys.path.append("..")
 from EnsemblePursuitModule.EnsemblePursuitPyTorch import EnsemblePursuitPyTorch
-from EnsemblePursuitModule.EnsemblePursuitNumpy import EnsemblePursuitNumpy
+from EnsemblePursuitModule.EnsemblePursuitNumpyFast import EnsemblePursuitNumpyFast
 #from EnsemblePursuitNumpy import EnsemblePursuitNumpy
 from sklearn.decomposition import SparsePCA
 from sklearn.decomposition import FastICA
@@ -36,7 +36,7 @@ class ModelPipelineSingleMouse():
         if self.model=='EnsemblePursuit_numpy':
             X=subtract_spont(spont,resp).T
             options_dict={'seed_neuron_av_nr':100,'min_assembly_size':8}
-            ep_np=EnsemblePursuitNumpy(n_ensembles=self.nr_of_components,lambd=self.lambd_,options_dict=options_dict)
+            ep_np=EnsemblePursuitNumpyFast(n_ensembles=self.nr_of_components,lambd=self.lambd_,options_dict=options_dict)
             start=time.time()
             U,V=ep_np.fit_transform(X)
             end=time.time()
