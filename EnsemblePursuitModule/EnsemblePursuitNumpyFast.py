@@ -181,7 +181,6 @@ class EnsemblePursuitNumpyFast():
         while max_cost_delta>0:
                 #Add the x corresponding to the max delta neuron to C_sum. Saves computational
                 #time.
-            print(n)
             C_summed_unnorm=self.sum_C(C_summed_unnorm,C,max_delta_neuron)
             C_summed=(1./n)*C_summed_unnorm
             dot_squared=self.calculate_dot_squared(C_summed)
