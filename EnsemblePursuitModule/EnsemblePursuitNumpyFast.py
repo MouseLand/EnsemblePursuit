@@ -118,27 +118,32 @@ class EnsemblePursuitNumpyFast():
         self.V=np.concatenate((self.V,current_v.reshape(1,self.sz[1])),axis=0)
         return current_u, current_v, C, selected_neurons
 
-    def fit_one_ensemble_suite2p(self,X,starting_v):
-        X=self.zscore(X)
-        C=X@X.T
+    def fit_one_ensemble_suite2p(self,X,C,seed_timecourse):
+        self.n_neurons_for_sampling=1
+        min_assembly_size=self.options_dict['min_assembly_size']
+        min_assembly_size=1
         self.sz=X.shape
-        #cost_vector=np.clip(X@starting_v,a_min=0,a_max=None)**2
-        corr_vector=self.vcorrcoef(X,starting_v)
-        seed=np.argmax(corr_vector)
-        current_v=starting_v
+        #index for switching between top neurons for fitting ensemble when the first neurons
+        #doesn't give large enough ensemble
+        index=-1
+        selected_neurons=np.zeros((X.shape[0]),dtype=bool)
+        #Fake cost to initiate while loop
+        max_cost_delta=1000
+        n=1
+        #while n<=min_assembly_size:
+        C[:,-1]=(X@(seed_timecourse.T)).flatten()
+        n=1
+        current_v=seed_timecourse
+        print(current_v.shape)
         current_v_unnorm=current_v.copy()
         selected_neurons=np.zeros((X.shape[0]),dtype=bool)
-        #Seed current_v
-        selected_neurons[seed]=1
         #Fake cost to initiate while loop
         max_cost_delta=1000
         C_summed_unnorm=0
-        max_delta_neuron=seed
-        n=1
+        max_delta_neuron=-1
         while max_cost_delta>0:
-            #Add the x corresponding to the max delta neuron to C_sum. Saves computational
-            #time.
-            print('n',n)
+                #Add the x corresponding to the max delta neuron to C_sum. Saves computational
+                #time.
             C_summed_unnorm=self.sum_C(C_summed_unnorm,C,max_delta_neuron)
             C_summed=(1./n)*C_summed_unnorm
             dot_squared=self.calculate_dot_squared(C_summed)
@@ -147,7 +152,6 @@ class EnsemblePursuitNumpyFast():
             masked_dot_squared=self.mask_dot_squared(selected_neurons,dot_squared)
             max_delta_neuron=np.argmax(masked_dot_squared)
             cost_delta=self.calculate_cost_delta(C_summed[max_delta_neuron],current_v)
-            print('cost delta',cost_delta)
             if cost_delta>0:
                 selected_neurons[max_delta_neuron]=1
                 current_v_unnorm= self.sum_v(current_v_unnorm,max_delta_neuron,X)
@@ -160,6 +164,7 @@ class EnsemblePursuitNumpyFast():
         self.n_neurons_for_sampling=1
         min_assembly_size=self.options_dict['min_assembly_size']
         min_assembly_size=1
+        self.sz=X.shape
         #index for switching between top neurons for fitting ensemble when the first neurons
         #doesn't give large enough ensemble
         index=-1
