@@ -26,7 +26,7 @@ class EnsemblePursuitNumpyFast():
 
     def calculate_cost_delta(self,C_summed,current_v):
         '''
-        Use the corrrelation matrix to compute the change in cost for adding one more neuron.
+        Use the similarity matrix to compute the change in cost for adding one more neuron.
         '''
         cost_delta=np.clip(C_summed,a_min=0,a_max=None)**2/(self.sz[1]*(current_v**2).sum())-self.lambd
         return cost_delta
@@ -184,7 +184,8 @@ class EnsemblePursuitNumpyFast():
         while max_cost_delta>0:
             #Add the x corresponding to the max delta neuron to C_sum. Saves computational
             #time.
-            start=time.time()
+            #Summing the C at each iteration instead of indexing neurons and take the mean_stimuli
+            #is three orders of magnitude faster.
             C_summed_unnorm=self.sum_C(C_summed_unnorm,C,max_delta_neuron)
             C_summed=(1./n)*C_summed_unnorm
             dot_squared=self.calculate_dot_squared(C_summed)
