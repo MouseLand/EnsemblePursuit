@@ -11,7 +11,7 @@ from EnsemblePursuitModule.EnsemblePursuitNumpyFast import EnsemblePursuitNumpyF
 from scipy.ndimage import gaussian_filter, gaussian_filter1d
 import matplotlib.pyplot as plt
 from scipy.stats import zscore
-from sklearn.decomposition import FastICA
+from sklearn.decomposition import FastICA, NMF, PCA
 
 class ReceptiveFieldsPlusBehaviorPipeline():
     def __init__(self,data_path,model,nr_of_components):
@@ -28,17 +28,37 @@ class ReceptiveFieldsPlusBehaviorPipeline():
         iframe = iframe[ivalid]
         S = spks[:, iframe+dt]
         del spks
-        S = stats.zscore(S, axis=1) # z-score the neural activity before doing anything
         if self.model=='EnsemblePursuit':
+            S = stats.zscore(S, axis=1)
             options_dict={'seed_neuron_av_nr':100,'min_assembly_size':8}
             nr_of_components=200
             ep_np=EnsemblePursuitNumpyFast(n_ensembles=self.nr_of_components,lambd=0.01,options_dict=options_dict)
             U,V=ep_np.fit_transform(S)
             return U,V
         if self.model=='ICA':
+            S = stats.zscore(S, axis=1)
             ica=FastICA(n_components=self.nr_of_components)
-            U=ica.fit_transform(S.T)
-            V=ica.components_.T
+            V=ica.fit_transform(S.T)
+            U=ica.components_
+            return U,V
+        if self.model=='NMF':
+            nmf=NMF(n_components=self.nr_of_components)
+            start=time.time()
+            V=nmf.fit_transform(S.T)
+            end=time.time()
+            elapsed_time=end-start
+            U=nmf.components_
+            print(elapsed_time)
+            return U,V
+        if self.model=='PCA':
+            S = stats.zscore(S, axis=1)
+            pca=PCA(n_components=self.nr_of_components)
+            start=time.time()
+            V=pca.fit_transform(S.T)
+            end=time.time()
+            elapsed_time=end-start
+            U=pca.components_
+            print(elapsed_time)
             return U,V
 
     def train_test_split(self,NT):
