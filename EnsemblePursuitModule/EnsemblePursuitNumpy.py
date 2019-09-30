@@ -42,6 +42,7 @@ class EnsemblePursuitNumpy():
         start=time.time()
         C=X@X.T
         end=time.time()
+        print(C)
         #A parameter to account for how many top neurons we sample from. It starts from 1,
         #because we choose the top neuron when possible, e.g. when we can find an ensemble
         # that is larger than min ensemble size. If there is no ensemble with the top neuron

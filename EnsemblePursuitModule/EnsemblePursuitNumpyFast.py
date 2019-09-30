@@ -26,7 +26,7 @@ class EnsemblePursuitNumpyFast():
 
     def calculate_cost_delta(self,C_summed,current_v):
         '''
-        Use the corrrelation matrix to compute the change in cost for adding one more neuron.
+        Use the similarity matrix to compute the change in cost for adding one more neuron.
         '''
         cost_delta=np.clip(C_summed,a_min=0,a_max=None)**2/(self.sz[1]*(current_v**2).sum())-self.lambd
         return cost_delta
@@ -53,15 +53,14 @@ class EnsemblePursuitNumpyFast():
         current_v=v+X[max_delta_neuron,:]
         return current_v
 
-    def update_C(self,X,prev_C,u,v,selected_neurons):
+    def update_C(self,X,C,u,v,selected_neurons):
         #selected_neurons=np.nonzero(u)[0]
-        C=prev_C
-        cross_term_init=X@v
+        cross_term_init=X@(v.T)
         cross_term=np.outer(u[selected_neurons],cross_term_init)
         C[selected_neurons,:]=C[selected_neurons,:]-cross_term
         ixgrid=np.ix_(~selected_neurons,selected_neurons)
         C[ixgrid]=C[ixgrid]-cross_term.T[~selected_neurons,:]
-        return C
+
 
     def fit_one_ensemble(self,X,C):
         #A parameter to account for how many top neurons we sample from. It starts from 1,
@@ -115,27 +114,32 @@ class EnsemblePursuitNumpyFast():
         self.V=np.concatenate((self.V,current_v.reshape(1,self.sz[1])),axis=0)
         return current_u, current_v, C, selected_neurons
 
-    def fit_one_ensemble_suite2p(self,X,starting_v):
-        X=self.zscore(X)
-        C=X@X.T
+    def fit_one_ensemble_suite2p(self,X,C,seed_timecourse):
+        self.n_neurons_for_sampling=1
+        min_assembly_size=self.options_dict['min_assembly_size']
+        min_assembly_size=1
         self.sz=X.shape
-        #cost_vector=np.clip(X@starting_v,a_min=0,a_max=None)**2
-        corr_vector=self.vcorrcoef(X,starting_v)
-        seed=np.argmax(corr_vector)
-        current_v=starting_v
+        #index for switching between top neurons for fitting ensemble when the first neurons
+        #doesn't give large enough ensemble
+        index=-1
+        selected_neurons=np.zeros((X.shape[0]),dtype=bool)
+        #Fake cost to initiate while loop
+        max_cost_delta=1000
+        n=1
+        #while n<=min_assembly_size:
+        C[:,-1]=(X@(seed_timecourse.T)).flatten()
+        n=1
+        current_v=seed_timecourse
+        print(current_v.shape)
         current_v_unnorm=current_v.copy()
         selected_neurons=np.zeros((X.shape[0]),dtype=bool)
-        #Seed current_v
-        selected_neurons[seed]=1
         #Fake cost to initiate while loop
         max_cost_delta=1000
         C_summed_unnorm=0
-        max_delta_neuron=seed
-        n=1
+        max_delta_neuron=-1
         while max_cost_delta>0:
-            #Add the x corresponding to the max delta neuron to C_sum. Saves computational
-            #time.
-            print('n',n)
+                #Add the x corresponding to the max delta neuron to C_sum. Saves computational
+                #time.
             C_summed_unnorm=self.sum_C(C_summed_unnorm,C,max_delta_neuron)
             C_summed=(1./n)*C_summed_unnorm
             dot_squared=self.calculate_dot_squared(C_summed)
@@ -144,7 +148,6 @@ class EnsemblePursuitNumpyFast():
             masked_dot_squared=self.mask_dot_squared(selected_neurons,dot_squared)
             max_delta_neuron=np.argmax(masked_dot_squared)
             cost_delta=self.calculate_cost_delta(C_summed[max_delta_neuron],current_v)
-            print('cost delta',cost_delta)
             if cost_delta>0:
                 selected_neurons[max_delta_neuron]=1
                 current_v_unnorm= self.sum_v(current_v_unnorm,max_delta_neuron,X)
@@ -155,57 +158,56 @@ class EnsemblePursuitNumpyFast():
 
     def fit_one_ensemble_seed_timecourse(self,X,C,seed_timecourse):
         self.n_neurons_for_sampling=1
-        n=0
         min_assembly_size=self.options_dict['min_assembly_size']
         min_assembly_size=1
+        self.sz=X.shape
         #index for switching between top neurons for fitting ensemble when the first neurons
         #doesn't give large enough ensemble
         index=-1
+        selected_neurons=np.zeros((X.shape[0]),dtype=bool)
+        #Fake cost to initiate while loop
+        max_cost_delta=1000
+        n=1
+        #while n<=min_assembly_size:
+        #Fill the last column with the similarity of X and seed timecourse
+        C[:,-1]=(X@(seed_timecourse.T)).flatten()
+        n=1
         current_v=seed_timecourse
         current_v_unnorm=current_v.copy()
         selected_neurons=np.zeros((X.shape[0]),dtype=bool)
         #Fake cost to initiate while loop
         max_cost_delta=1000
-        C_summed_unnorm=X@seed_timecourse
-        n=1
-        while n<min_assembly_size:
-            #C_summed_unnorm=X@seed_timecourse
-            #seed=self.repeated_seed(C,index)
-            n=1
-            selected_neurons=np.zeros((X.shape[0]),dtype=bool)
-            dot_squared=self.calculate_dot_squared(C_summed_unnorm)
+        #Initialize C_sum unnormalized to zero
+        C_summed_unnorm=0
+        #max_delta_neuron starts as the input activity trace
+        max_delta_neuron=-1
+        while max_cost_delta>0:
+            #Add the x corresponding to the max delta neuron to C_sum. Saves computational
+            #time.
+            #Summing the C at each iteration instead of indexing neurons and take the mean_stimuli
+            #is three orders of magnitude faster.
+            C_summed_unnorm=self.sum_C(C_summed_unnorm,C,max_delta_neuron)
+            C_summed=(1./n)*C_summed_unnorm
+            dot_squared=self.calculate_dot_squared(C_summed)
+            #invert the 0's and 1's in the array which stores which neurons have already
+            #been selected into the assembly to use it as a mask
+            masked_dot_squared=self.mask_dot_squared(selected_neurons,dot_squared)
             max_delta_neuron=np.argmax(masked_dot_squared)
-            #Seed current_v
-            selected_neurons[max_delta_neuron]=1
-            #Fake cost to initiate while loop
-            max_cost_delta=1000
-            #C_summed_unnorm=X@seed_timecourse
-            while max_cost_delta>0:
-                #Add the x corresponding to the max delta neuron to C_sum. Saves computational
-                #time.
-                print(n)
-                C_summed_unnorm=self.sum_C(C_summed_unnorm,C,max_delta_neuron)
-                C_summed=(1./n)*C_summed_unnorm
-                dot_squared=self.calculate_dot_squared(C_summed)
-                #invert the 0's and 1's in the array which stores which neurons have already
-                #been selected into the assembly to use it as a mask
-                masked_dot_squared=self.mask_dot_squared(selected_neurons,dot_squared)
-                max_delta_neuron=np.argmax(masked_dot_squared)
-                cost_delta=self.calculate_cost_delta(C_summed[max_delta_neuron],current_v)
-                if cost_delta>0:
-                    selected_neurons[max_delta_neuron]=1
-                    current_v_unnorm= self.sum_v(current_v_unnorm,max_delta_neuron,X)
-                    n+=1
-                    current_v=(1./n)*current_v_unnorm
-                max_cost_delta=cost_delta
+            cost_delta=self.calculate_cost_delta(C_summed[max_delta_neuron],current_v)
+            if cost_delta>0:
+                selected_neurons[max_delta_neuron]=1
+                current_v_unnorm= self.sum_v(current_v_unnorm,max_delta_neuron,X)
+                n+=1
+                current_v=(1./n)*current_v_unnorm
+            max_cost_delta=cost_delta
 
-            index+=-1
+        index+=-1
         print('nr of neurons in ensemble',n)
         current_u=np.zeros((X.shape[0],1))
         current_u[selected_neurons,0]=np.clip(C_summed[selected_neurons],a_min=0,a_max=None)/(current_v**2).sum()
         self.U=np.concatenate((self.U,current_u),axis=1)
         self.V=np.concatenate((self.V,current_v.reshape(1,self.sz[1])),axis=0)
-        return current_u, current_v, C, selected_neurons
+        return current_u, current_v, selected_neurons
 
 
     def repeated_seed(self,C,index):
@@ -249,28 +251,24 @@ class EnsemblePursuitNumpyFast():
         self.sz=X.shape
         self.U=np.zeros((X.shape[0],1))
         self.V=np.zeros((1,X.shape[1]))
-        start=time.time()
-        C=X@X.T
-        end=time.time()
-        print('full',end-start)
-        start=time.time()
+        #there's an extra column at the end for holding the input activity trace
+        #Make the order 'F' to support fast column operations
+        C=np.empty((self.sz[0],self.sz[0]+1),order='F')
+        #Fill the columns with X@X.T except for the column with the input activity trace
+        C[:,:-1]=X@X.T
         #kmeans = KMeans(n_clusters=self.n_ensembles, random_state=0).fit(X.T).labels_
         #np.save('kmeans_init.npy',kmeans)
         kmeans=np.load('kmeans_init.npy')
-        end=time.time()
-        print('kmeans',end-start)
         for iteration in range(0,self.n_ensembles):
             start=time.time()
-            average_timecourse=np.mean(X[np.where(kmeans==iteration),:], axis=0).T
-            print('shp',average_timecourse.shape)
-            current_u, current_v, C,selected_neurons=self.fit_one_ensemble_seed_timecourse(X,C,average_timecourse)
-            end=time.time()
-            print(end-start,'loop')
+            print('where',np.where(kmeans==iteration)[0].flatten())
+            average_timecourse=np.mean(X[np.where(kmeans==iteration)[0].flatten(),:], axis=0)
+            current_u, current_v,selected_neurons=self.fit_one_ensemble_seed_timecourse(X,C,average_timecourse)
             U_V=current_u.reshape(self.sz[0],1)@current_v.reshape(1,self.sz[1])
             start=time.time()
-            C=self.update_C(X,C,current_u,current_v,selected_neurons)
-            end=time.time()
-            print('optimized',end-start)
+            #Update C in-place. Uses an efficient algorithm to update only the neurons that have been
+            #added to the previous ensemble.
+            self.update_C(X,C[:,:-1],current_u,current_v,selected_neurons)
             X=X-U_V
             print('ensemble nr', iteration)
             cost=np.mean(X*X)
