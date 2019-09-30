@@ -11,6 +11,7 @@ from EnsemblePursuitModule.EnsemblePursuitNumpyFast import EnsemblePursuitNumpyF
 from scipy.ndimage import gaussian_filter, gaussian_filter1d
 import matplotlib.pyplot as plt
 from scipy.stats import zscore
+from sklearn.decomposition import FastICA
 
 class ReceptiveFieldsPlusBehaviorPipeline():
     def __init__(self,data_path,model,nr_of_components):
@@ -19,17 +20,25 @@ class ReceptiveFieldsPlusBehaviorPipeline():
         self.nr_of_components=nr_of_components
 
     def fit(self):
+        dt=1
         spks= np.load(self.data_path+'spks.npy')
-        print('Shape of the data matrix, timepoints by neurons:',spks.shape)
+        print('Shape of the data matrix, neurons by timepoints:',spks.shape)
         iframe = np.load(self.data_path+'iframe.npy') # iframe[n] is the microscope frame for the image frame n
+        ivalid = iframe+dt<spks.shape[-1] # remove timepoints outside the valid time range
+        iframe = iframe[ivalid]
         S = spks[:, iframe+dt]
         del spks
         S = stats.zscore(S, axis=1) # z-score the neural activity before doing anything
-        if model=='EnsemblePursuit':
+        if self.model=='EnsemblePursuit':
             options_dict={'seed_neuron_av_nr':100,'min_assembly_size':8}
             nr_of_components=200
             ep_np=EnsemblePursuitNumpyFast(n_ensembles=self.nr_of_components,lambd=0.01,options_dict=options_dict)
             U,V=ep_np.fit_transform(S)
+            return U,V
+        if self.model=='ICA':
+            ica=FastICA(n_components=self.nr_of_components)
+            U=ica.fit_transform(S.T)
+            V=ica.components_.T
             return U,V
 
     def train_test_split(self,NT):
@@ -205,3 +214,19 @@ class ReceptiveFieldsPlusBehaviorPipeline():
         plt.xlabel('Correlations from stimulus predictions on test set')
         plt.ylabel('Correlations from behavior predictions on test set')
         plt.show()
+
+    def behavior_correlation_seed(self):
+        iframe = np.load(self.data_path+'iframe.npy')
+        spks= np.load(self.data_path+'spks.npy')
+        dt = 1 # time offset between stimulus presentation and response
+        ivalid = iframe+dt<spks.shape[-1] # remove timepoints outside the valid time range
+        iframe = iframe[ivalid]
+        S = spks[:, iframe+dt]
+        S = stats.zscore(S, axis=1) # z-score the neural activity before doing anything
+        del spks
+        proc = np.load(self.data_path+'cam1_TX39_2019_05_31_1_proc_resampled.npy', allow_pickle=True).item()
+        motSVD = proc['motSVD'][:,iframe+dt]
+        options_dict={'seed_neuron_av_nr':100,'min_assembly_size':8}
+        ep_np=EnsemblePursuitNumpyFast(n_ensembles=1,lambd=0.01,options_dict=options_dict)
+        cells=ep_np.fit_one_ensemble_suite2p(S,motSVD[0,:])
+        print(np.corrcoef(np.mean(S[cells,:],axis=0),motSVD[0,:]))
