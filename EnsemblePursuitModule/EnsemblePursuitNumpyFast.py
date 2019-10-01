@@ -99,6 +99,7 @@ class EnsemblePursuitNumpyFast():
                 masked_dot_squared=self.mask_dot_squared(selected_neurons,dot_squared)
                 max_delta_neuron=np.argmax(masked_dot_squared)
                 cost_delta=self.calculate_cost_delta(C_summed[max_delta_neuron],current_v)
+                print(cost_delta)
                 if cost_delta>0:
                     selected_neurons[max_delta_neuron]=1
                     current_v_unnorm= self.sum_v(current_v_unnorm,max_delta_neuron,X)
@@ -234,7 +235,7 @@ class EnsemblePursuitNumpyFast():
             print(end-start,'loop')
             U_V=current_u.reshape(self.sz[0],1)@current_v.reshape(1,self.sz[1])
             start=time.time()
-            C=self.update_C(X,C,current_u,current_v,selected_neurons)
+            self.update_C(X,C,current_u,current_v,selected_neurons)
             end=time.time()
             print('optimized',end-start)
             X=X-U_V
