@@ -3,18 +3,42 @@ import time
 from sklearn.cluster import KMeans
 
 
+def fit_one_ensemble_seed_timecourse(X, C, seed_timecourse = [], lam = 0.005):
+    NT, NN = X.shape
+    valid_neurons=np.ones((NN,),dtype=bool)
+
+    bias = seed_timecourse @ X
+    current_v = seed_timecourse
+    C_summed = bias.flatten()
+
+    iorder = np.zeros(NN, 'int32')
+    for n in range(NN):
+        # at each iteration, first determine the neuron to be added
+        imax = np.argmax(C_summed * valid_neurons)
+        vnorm = np.sum(current_v**2)
+        cost_delta = np.maximum(0., C_summed[imax])**2 / vnorm
+        if cost_delta<lam*X.shape[0]:
+            break
+        valid_neurons[imax] = False
+        C_summed = C_summed + C[:, imax]
+        current_v = current_v + X[:, imax]
+        iorder[n] = imax
+    iorder = iorder[:n]
+    return iorder, current_v
+
+def zscore(self,X):
+    mean_stimuli=np.mean(X.T,axis=0)
+    std_stimuli=np.std(X.T,axis=0,ddof=1)+1e-10
+    X=np.subtract(X.T,mean_stimuli)
+    X=np.divide(X,std_stimuli)
+    return X.T
+
 class EnsemblePursuitNumpyFast():
     def __init__(self,n_ensembles,lambd,options_dict):
         self.n_ensembles=n_ensembles
         self.lambd=lambd
         self.options_dict=options_dict
 
-    def zscore(self,X):
-        mean_stimuli=np.mean(X.T,axis=0)
-        std_stimuli=np.std(X.T,axis=0,ddof=1)+1e-10
-        X=np.subtract(X.T,mean_stimuli)
-        X=np.divide(X,std_stimuli)
-        return X.T
 
     def calculate_dot_squared(self,C_summed):
         '''
@@ -90,7 +114,7 @@ class EnsemblePursuitNumpyFast():
             while max_cost_delta>0:
                 #Add the x corresponding to the max delta neuron to C_sum. Saves computational
                 #time.
-                print(n)
+                #print(n)
                 C_summed_unnorm=self.sum_C(C_summed_unnorm,C,max_delta_neuron)
                 C_summed=(1./n)*C_summed_unnorm
                 dot_squared=self.calculate_dot_squared(C_summed)
@@ -226,22 +250,22 @@ class EnsemblePursuitNumpyFast():
         self.V=np.zeros((1,X.shape[1]))
         start=time.time()
         C=X@X.T
-        end=time.time()
-        print('full',end-start)
+        #end=time.time()
+        #print('full',end-start)
         for iteration in range(0,self.n_ensembles):
             start=time.time()
             current_u, current_v, C,selected_neurons=self.fit_one_ensemble(X,C)
-            end=time.time()
-            print(end-start,'loop')
+            #end=time.time()
+            #print(end-start,'loop')
             U_V=current_u.reshape(self.sz[0],1)@current_v.reshape(1,self.sz[1])
             start=time.time()
             self.update_C(X,C,current_u,current_v,selected_neurons)
             end=time.time()
             print('optimized',end-start)
             X=X-U_V
-            print('ensemble nr', iteration)
+            #print('ensemble nr', iteration)
             cost=np.mean(X*X)
-            print('cost',cost)
+            #print('cost',cost)
         #After fitting arrays discard the zero initialization rows and columns from U and V.
         self.U=self.U[:,1:]
         self.V=self.V[1:,:]
@@ -271,7 +295,6 @@ class EnsemblePursuitNumpyFast():
             #added to the previous ensemble.
             self.update_C(X,C[:,:-1],current_u,current_v,selected_neurons)
             X=X-U_V
-            print('ensemble nr', iteration)
             cost=np.mean(X*X)
             print('cost',cost)
         #After fitting arrays discard the zero initialization rows and columns from U and V.
