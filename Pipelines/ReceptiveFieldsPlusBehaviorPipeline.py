@@ -7,7 +7,7 @@ from scipy import io
 import time
 import sys
 sys.path.append("..")
-from EnsemblePursuitModule.EnsemblePursuitNumpyFast import EnsemblePursuitNumpyFast
+from EnsemblePursuitModule.EnsemblePursuitNumpy import EnsemblePursuitNumpy
 from scipy.ndimage import gaussian_filter, gaussian_filter1d
 import matplotlib.pyplot as plt
 from scipy.stats import zscore
@@ -29,10 +29,10 @@ class ReceptiveFieldsPlusBehaviorPipeline():
         S = spks[:, iframe+dt]
         del spks
         if self.model=='EnsemblePursuit':
-            S = stats.zscore(S, axis=1)
+            #S = stats.zscore(S, axis=1)
             options_dict={'seed_neuron_av_nr':100,'min_assembly_size':8}
             nr_of_components=200
-            ep_np=EnsemblePursuitNumpyFast(n_ensembles=self.nr_of_components,lambd=0.01,options_dict=options_dict)
+            ep_np=EnsemblePursuitNumpy(n_ensembles=self.nr_of_components,lambd=0.01,options_dict=options_dict)
             U,V=ep_np.fit_transform(S)
             return U,V
         if self.model=='ICA':

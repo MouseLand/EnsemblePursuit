@@ -47,6 +47,24 @@ class ModelPipelineSingleMouse():
                 np.save(self.save_path+filename+'_U_ep_numpy.npy',U)
             return U,V
 
+    def fit_model_kmeans_init(self):
+        data = io.loadmat(self.data_path+self.mouse_filename)
+        resp = data['stim'][0]['resp'][0]
+        spont =data['stim'][0]['spont'][0]
+        if self.model=='EnsemblePursuit_numpy':
+            X=subtract_spont(spont,resp).T
+            options_dict={'seed_neuron_av_nr':100,'min_assembly_size':8}
+            ep_np=EnsemblePursuitNumpyFast(n_ensembles=self.nr_of_components,lambd=self.lambd_,options_dict=options_dict)
+            start=time.time()
+            U,V=ep_np.fit_transform_kmeans_init(X)
+            end=time.time()
+            tm=end-start
+            print('Time', tm)
+            if self.save==True:
+                np.save(self.save_path+filename+'_V_ep_numpy.npy',V)
+                np.save(self.save_path+filename+'_U_ep_numpy.npy',U)
+            return U,V
+
     def knn(self,V):
         columns=['Experiment','accuracy']
         acc_df=pd.DataFrame(columns=columns)
