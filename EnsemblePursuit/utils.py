@@ -10,6 +10,20 @@ def zscore(X, axis=0):
 
     return X
 
+def PCA(images,k=100):
+    images=torch.cuda.FloatTensor(images)
+    mean_im=torch.mean(images,dim=0)
+    centered=torch.sub(images,mean_im)
+    print(centered.size())
+    U,S,V=torch.svd(centered)
+    #print(U,S,V)
+    S=torch.diag(S)
+    print(U.size())
+    reduced=torch.matmul(U[:,:k],S[:k,:k])
+    #print(reduced.size())
+    reduced=torch.matmul(reduced,V[:,:k].t())
+    return np.array(reduced.cpu())
+
 def test_train_split(data,stim):
     unique, counts = np.unique(stim.flatten(), return_counts=True)
     count_dict=dict(zip(unique, counts))
