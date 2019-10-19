@@ -3,6 +3,8 @@ from sklearn.decomposition import PCA
 from scipy.stats import skew
 import time
 from scipy.stats import zscore
+import sys
+sys.path.insert(1, '/home/maria/Documents/EnsemblePursuit/EnsemblePursuit')
 from EnsemblePursuit import utils
 
 def new_ensemble(X, C, seed_timecourse, lam, discard_first_neuron = False):
@@ -40,6 +42,8 @@ def new_ensemble(X, C, seed_timecourse, lam, discard_first_neuron = False):
         if cost_delta<lam*NT:
             break
 
+        if n==NN:
+            break
         # zero out freshly added neuron
         mask_neurons[imax] = False
 
