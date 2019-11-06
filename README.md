@@ -8,6 +8,9 @@ The matrix U is a sparse matrix (because of an L0 penalty in the cost function) 
 
 For more details see the  [wiki](https://github.com/mariakesa/EnsemblePursuit/wiki) and our [Statistical Analysis of Neural Data 2019 workshop poster](https://github.com/mariakesa/EnsemblePursuit/blob/master/sand_poster2019.pdf)
 
+![Alt Text](https://github.com/MouseLand/EnsemblePursuit/blob/master/Figures/my_gif.gif)
+
+
 Ensembles learned using EnsemblePursuit from recordings in V1 have Gabor receptive fields. 
 
 ![alt text](https://github.com/mariakesa/EnsemblePursuit/blob/master/Figures/ep_rec_fields.png)
