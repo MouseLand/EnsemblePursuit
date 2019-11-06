@@ -10,7 +10,6 @@ For more details see the  [wiki](https://github.com/mariakesa/EnsemblePursuit/wi
 
 ![Alt Text](https://github.com/MouseLand/EnsemblePursuit/blob/master/Figures/my_gif.gif)
 
-
 Ensembles learned using EnsemblePursuit from recordings in V1 have Gabor receptive fields. 
 
 ![alt text](https://github.com/mariakesa/EnsemblePursuit/blob/master/Figures/ep_rec_fields.png)
