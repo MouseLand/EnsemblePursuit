@@ -3,8 +3,6 @@ from sklearn.decomposition import PCA
 from scipy.stats import skew
 import time
 from scipy.stats import zscore
-import sys
-sys.path.insert(1, '/home/maria/Documents/EnsemblePursuit/EnsemblePursuit')
 from EnsemblePursuit import utils
 
 def new_ensemble(X, C, seed_timecourse, lam, discard_first_neuron = False):
@@ -37,6 +35,8 @@ def new_ensemble(X, C, seed_timecourse, lam, discard_first_neuron = False):
 
         # compute delta cost function
         cost_delta = np.maximum(0., C_summed[imax])**2 / vnorm
+
+        print('cost_delta',cost_delta/NT)
 
         # if cost/variance explained is less than lam (* n_timepoints) then break
         if cost_delta<lam*NT:
