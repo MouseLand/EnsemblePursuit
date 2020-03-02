@@ -6,6 +6,8 @@ Ensemble Pursuit is a matrix factorization algorithm that extracts sparse neural
 
 The matrix U is a sparse matrix (because of an L0 penalty in the cost function) that encodes which neurons belong to a component. V is an average timecourse of these neurons, e.g. component time course.
 
+You can install EnsemblePursuit with "pip install EnsemblePursuit"
+
 For more details see the  [wiki](https://github.com/mariakesa/EnsemblePursuit/wiki) and our [Statistical Analysis of Neural Data 2019 workshop poster](https://github.com/mariakesa/EnsemblePursuit/blob/master/sand_poster2019.pdf)
 
 ![Alt Text](https://github.com/MouseLand/EnsemblePursuit/blob/master/Figures/my_gif.gif)
